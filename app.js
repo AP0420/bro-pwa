@@ -1,6 +1,6 @@
 /*********************************
  * BRO – SIRI STYLE VOICE ASSISTANT
- * (WITH WORKING WHATSAPP FLOW)
+ * (SECURITY UPDATED)
  *********************************/
 
 const status = document.getElementById("status");
@@ -42,6 +42,10 @@ recognition.continuous = true;
 
 let listening = false;
 let unlocked = sessionStorage.getItem("unlocked") === "true";
+
+// ---------- SECURITY ----------
+const SECURITY_QUESTION = "What's up my gang?";
+const SECURITY_PASSWORD = "welcome to hood";
 
 // ---------- WHATSAPP STATE ----------
 let whatsappStep = null;
@@ -119,10 +123,15 @@ recognition.onresult = (event) => {
   // Wake word
   if (!text.includes("bro")) return;
 
+  // ---------- SECURITY CHECK ----------
   if (!unlocked) {
-    speak("What's my gang");
-    unlocked = true;
-    sessionStorage.setItem("unlocked", "true");
+    if (text.includes(SECURITY_PASSWORD)) {
+      unlocked = true;
+      sessionStorage.setItem("unlocked", "true");
+      speak("Welcome AP");
+    } else {
+      speak(SECURITY_QUESTION);
+    }
     return;
   }
 
@@ -135,7 +144,7 @@ recognition.onresult = (event) => {
       break;
 
     case "EXIT":
-      speak("Bye. Talk to you later.");
+      speak("Bye AP. Talk to you later.");
       recognition.stop();
       listening = false;
       orbIdle();
