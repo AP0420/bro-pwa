@@ -1,18 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Bro Assistant</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+
 </head>
-
 <body>
-  <h1>🤖 Bro</h1>
-  <p id="status">Tap mic and say "Bro"</p>
 
-  <button id="mic">🎙️</button>
+  <div class="app">
+
+    <h1 class="title">Bro</h1>
+
+    <div class="assistant">
+      <div id="wave" class="wave hidden">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <button id="mic" class="mic idle">
+        🎙️
+      </button>
+    </div>
+
+    <p id="status" class="status">
+      Tap the mic and say <b>“Bro”</b>
+    </p>
+
+  </div>
 
   <script src="app.js"></script>
+
 </body>
 </html>
