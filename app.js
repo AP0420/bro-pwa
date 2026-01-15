@@ -1,5 +1,6 @@
 /*********************************
  * BRO – SIRI STYLE VOICE ASSISTANT
+ * (WITH WORKING WHATSAPP FLOW)
  *********************************/
 
 const status = document.getElementById("status");
@@ -10,16 +11,14 @@ const orb = document.getElementById("orb");
 function orbIdle() {
   orb.className = "orb idle";
 }
-
 function orbListening() {
   orb.className = "orb listening";
 }
-
 function orbSpeaking() {
   orb.className = "orb speaking";
 }
 
-// ---------- SPEECH ----------
+// ---------- SPEAK ----------
 function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
   msg.lang = "en-IN";
@@ -28,10 +27,7 @@ function speak(text) {
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
 
-  msg.onend = () => {
-    orbIdle();
-  };
-
+  msg.onend = () => orbIdle();
   console.log("🤖 Bro:", text);
 }
 
@@ -47,22 +43,80 @@ recognition.continuous = true;
 let listening = false;
 let unlocked = sessionStorage.getItem("unlocked") === "true";
 
+// ---------- WHATSAPP STATE ----------
+let whatsappStep = null;
+let whatsappData = { to: "", message: "", attachment: false };
+let pendingAction = null;
+
 // ---------- INTENT ----------
 function getIntent(text) {
-  if (text.includes("time")) return "TIME";
   if (text.includes("whatsapp")) return "WHATSAPP";
-  if (text.includes("mail") || text.includes("email")) return "EMAIL";
+  if (text.includes("yes")) return "YES";
+  if (text.includes("no")) return "NO";
   if (text.includes("bye") || text.includes("exit")) return "EXIT";
   return "UNKNOWN";
+}
+
+// ---------- WHATSAPP FLOW ----------
+function handleWhatsappFlow(text) {
+  if (whatsappStep === "to") {
+    whatsappData.to = text.replace(/\D/g, "");
+    whatsappStep = "message";
+    speak("What message should I send?");
+    return true;
+  }
+
+  if (whatsappStep === "message") {
+    whatsappData.message = text;
+    whatsappStep = "attachment";
+    speak("Do you want to attach any file?");
+    return true;
+  }
+
+  if (whatsappStep === "attachment") {
+    whatsappData.attachment = text.includes("yes");
+
+    pendingAction = () => {
+      const url =
+        "https://wa.me/" +
+        whatsappData.to +
+        "?text=" +
+        encodeURIComponent(whatsappData.message);
+      window.open(url, "_blank");
+    };
+
+    speak("Should I open WhatsApp now?");
+    whatsappStep = null;
+    return true;
+  }
+
+  return false;
 }
 
 // ---------- MAIN LISTENER ----------
 recognition.onresult = (event) => {
   const text =
     event.results[event.results.length - 1][0].transcript.toLowerCase();
-
   status.innerText = "You: " + text;
 
+  // Confirmation step
+  if (pendingAction) {
+    const intent = getIntent(text);
+    if (intent === "YES") {
+      speak("Opening WhatsApp now.");
+      pendingAction();
+      pendingAction = null;
+    } else if (intent === "NO") {
+      speak("Okay, cancelled.");
+      pendingAction = null;
+    }
+    return;
+  }
+
+  // Active WhatsApp flow
+  if (whatsappStep && handleWhatsappFlow(text)) return;
+
+  // Wake word
   if (!text.includes("bro")) return;
 
   if (!unlocked) {
@@ -75,16 +129,9 @@ recognition.onresult = (event) => {
   const intent = getIntent(text);
 
   switch (intent) {
-    case "TIME":
-      speak("The time is " + new Date().toLocaleTimeString("en-IN"));
-      break;
-
     case "WHATSAPP":
-      speak("WhatsApp feature is ready. Tell me the details.");
-      break;
-
-    case "EMAIL":
-      speak("Email feature is ready. Tell me the details.");
+      whatsappStep = "to";
+      speak("Whom should I send the WhatsApp message to?");
       break;
 
     case "EXIT":
