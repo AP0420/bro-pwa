@@ -3,36 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <title>Bro Assistant</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
-
 </head>
-<body>
 
+<body>
   <div class="app">
 
     <h1 class="title">Bro</h1>
 
-    <div class="assistant">
-      <div id="wave" class="wave hidden">
-        <span></span><span></span><span></span><span></span>
-      </div>
+    <!-- Siri-like Orb -->
+    <div id="orb" class="orb idle"></div>
 
-      <button id="mic" class="mic idle">
-        🎙️
-      </button>
-    </div>
+    <button id="mic" class="mic">🎙️</button>
 
     <p id="status" class="status">
-      Tap the mic and say <b>“Bro”</b>
+      Tap mic and say <b>“Bro”</b>
     </p>
 
   </div>
 
   <script src="app.js"></script>
-
 </body>
 </html>
