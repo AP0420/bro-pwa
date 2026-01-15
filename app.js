@@ -1,6 +1,6 @@
 /*********************************
  * BRO – SIRI STYLE VOICE ASSISTANT
- * (SECURITY UPDATED)
+ * STRICT SECURITY + WHATSAPP WEB
  *********************************/
 
 const status = document.getElementById("status");
@@ -41,7 +41,7 @@ recognition.interimResults = false;
 recognition.continuous = true;
 
 let listening = false;
-let unlocked = sessionStorage.getItem("unlocked") === "true";
+let unlocked = false; // 🔒 STRICT: always false initially
 
 // ---------- SECURITY ----------
 const SECURITY_QUESTION = "What's up my gang?";
@@ -55,8 +55,8 @@ let pendingAction = null;
 // ---------- INTENT ----------
 function getIntent(text) {
   if (text.includes("whatsapp")) return "WHATSAPP";
-  if (text.includes("yes")) return "YES";
-  if (text.includes("no")) return "NO";
+  if (text === "yes") return "YES";
+  if (text === "no") return "NO";
   if (text.includes("bye") || text.includes("exit")) return "EXIT";
   return "UNKNOWN";
 }
@@ -81,15 +81,17 @@ function handleWhatsappFlow(text) {
     whatsappData.attachment = text.includes("yes");
 
     pendingAction = () => {
+      const message = encodeURIComponent(whatsappData.message);
       const url =
-        "https://wa.me/" +
+        "https://web.whatsapp.com/send?phone=" +
         whatsappData.to +
-        "?text=" +
-        encodeURIComponent(whatsappData.message);
+        "&text=" +
+        message;
+
       window.open(url, "_blank");
     };
 
-    speak("Should I open WhatsApp now?");
+    speak("Opening WhatsApp Web. Please review and send the message.");
     whatsappStep = null;
     return true;
   }
@@ -103,15 +105,26 @@ recognition.onresult = (event) => {
     event.results[event.results.length - 1][0].transcript.toLowerCase();
   status.innerText = "You: " + text;
 
+  // 🔒 STRICT SECURITY MODE
+  if (!unlocked) {
+    if (text.includes(SECURITY_PASSWORD)) {
+      unlocked = true;
+      speak("Welcome AP");
+    } else {
+      speak(SECURITY_QUESTION);
+    }
+    return; // 🚫 NOTHING ELSE RUNS
+  }
+
   // Confirmation step
   if (pendingAction) {
     const intent = getIntent(text);
     if (intent === "YES") {
-      speak("Opening WhatsApp now.");
+      speak("Okay, opening now.");
       pendingAction();
       pendingAction = null;
     } else if (intent === "NO") {
-      speak("Okay, cancelled.");
+      speak("Cancelled.");
       pendingAction = null;
     }
     return;
@@ -120,20 +133,8 @@ recognition.onresult = (event) => {
   // Active WhatsApp flow
   if (whatsappStep && handleWhatsappFlow(text)) return;
 
-  // Wake word
+  // Wake word required AFTER unlock
   if (!text.includes("bro")) return;
-
-  // ---------- SECURITY CHECK ----------
-  if (!unlocked) {
-    if (text.includes(SECURITY_PASSWORD)) {
-      unlocked = true;
-      sessionStorage.setItem("unlocked", "true");
-      speak("Welcome AP");
-    } else {
-      speak(SECURITY_QUESTION);
-    }
-    return;
-  }
 
   const intent = getIntent(text);
 
@@ -145,6 +146,7 @@ recognition.onresult = (event) => {
 
     case "EXIT":
       speak("Bye AP. Talk to you later.");
+      unlocked = false;
       recognition.stop();
       listening = false;
       orbIdle();
