@@ -16,6 +16,14 @@ recognition.maxAlternatives = 1;
 // ---------- SESSION ----------
 let unlocked = sessionStorage.getItem("unlocked") === "true";
 
+// ---------- EMAIL FLOW STATE ----------
+let emailStep = null;
+let emailData = {
+  to: "",
+  subject: "",
+  body: ""
+};
+
 // ---------- UTILITIES ----------
 function detectLanguage(text) {
   const hindiChars = /[अ-ह]/;
@@ -28,13 +36,9 @@ function detectLanguage(text) {
 
 function speak(text, langMode = "en") {
   const msg = new SpeechSynthesisUtterance(text);
-
-  if (langMode === "hi") msg.lang = "hi-IN";
-  else msg.lang = "en-IN";
-
+  msg.lang = langMode === "hi" ? "hi-IN" : "en-IN";
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
-
   console.log("🤖 Bro:", text);
 }
 
@@ -52,26 +56,61 @@ function getIntent(text) {
   if (["joke"].some(w => text.includes(w))) return "JOKE";
   if (["sad", "low"].some(w => text.includes(w))) return "MOOD_LOW";
   if (["mail", "email", "send mail"].some(w => text.includes(w))) return "EMAIL";
-
   return "UNKNOWN";
 }
 
-// ---------- EMAIL ----------
-function handleEmail(text, lang) {
-  let body = text.replace("send mail", "").replace("email", "").trim();
+// ---------- EMAIL FLOW ----------
+function handleEmailFlow(text, lang) {
+  if (emailStep === "to") {
+    emailData.to = text.replace(/\s/g, "");
+    emailStep = "subject";
+    speak(
+      lang === "hi"
+        ? "Email ka subject kya hoga?"
+        : lang === "hinglish"
+        ? "Mail ka subject batao"
+        : "What should be the subject?"
+    );
+    return true;
+  }
 
-  const url =
-    "https://mail.google.com/mail/?view=cm&fs=1&body=" +
-    encodeURIComponent(body);
+  if (emailStep === "subject") {
+    emailData.subject = text;
+    emailStep = "body";
+    speak(
+      lang === "hi"
+        ? "Email me kya likhna hai?"
+        : lang === "hinglish"
+        ? "Mail me kya likhu?"
+        : "What should I write in the email?"
+    );
+    return true;
+  }
 
-  if (lang === "hi")
-    speak("Main mail draft kar raha hoon. Aap bhej sakte hain.", "hi");
-  else if (lang === "hinglish")
-    speak("Mail draft kar diya bhai, bas send kar do");
-  else
-    speak("I have drafted the email for you. Please review and send.");
+  if (emailStep === "body") {
+    emailData.body = text;
+    emailStep = null;
 
-  window.open(url, "_blank");
+    const url =
+      "https://mail.google.com/mail/?view=cm&fs=1" +
+      "&to=" + encodeURIComponent(emailData.to) +
+      "&su=" + encodeURIComponent(emailData.subject) +
+      "&body=" + encodeURIComponent(emailData.body);
+
+    speak(
+      lang === "hi"
+        ? "Maine email draft kar diya hai. Aap bhej sakte hain."
+        : lang === "hinglish"
+        ? "Mail draft kar diya bhai, check karke send kar do"
+        : "I have drafted the email. Please review and send."
+    );
+
+    window.open(url, "_blank");
+    emailData = { to: "", subject: "", body: "" };
+    return true;
+  }
+
+  return false;
 }
 
 // ---------- MAIN LISTENER ----------
@@ -80,6 +119,12 @@ recognition.onresult = (event) => {
   status.innerText = "You: " + text;
 
   const lang = detectLanguage(text);
+
+  // Email flow in progress
+  if (emailStep) {
+    handleEmailFlow(text, lang);
+    return;
+  }
 
   // Wake word
   if (!text.includes("bro")) {
@@ -100,9 +145,13 @@ recognition.onresult = (event) => {
   switch (intent) {
     case "TIME":
       const time = new Date().toLocaleTimeString("en-IN");
-      if (lang === "hi") speak(`Abhi samay hai ${time}`, "hi");
-      else if (lang === "hinglish") speak(`Time hai ${time}`);
-      else speak(`The time is ${time}`);
+      speak(
+        lang === "hi"
+          ? `Abhi samay hai ${time}`
+          : lang === "hinglish"
+          ? `Time hai ${time}`
+          : `The time is ${time}`
+      );
       break;
 
     case "PLAY":
@@ -111,19 +160,30 @@ recognition.onresult = (event) => {
       break;
 
     case "EMAIL":
-      handleEmail(text, lang);
+      emailStep = "to";
+      speak(
+        lang === "hi"
+          ? "Kis ko email bhejna hai?"
+          : lang === "hinglish"
+          ? "Kisko mail bhejna hai?"
+          : "Whom should I send the email to?"
+      );
       break;
 
     case "JOKE":
-      if (lang === "hi")
-        speak("Computer thak kyun gaya? Kyunki usne bahut processing ki.", "hi");
-      else speak("Why did the computer get tired? Too much processing.");
+      speak(
+        lang === "hi"
+          ? "Computer thak kyun gaya? Kyunki usne bahut processing ki."
+          : "Why did the computer get tired? Too much processing."
+      );
       break;
 
     case "MOOD_LOW":
-      if (lang === "hi")
-        speak("Main samajh raha hoon. Aap akela nahi ho.", "hi");
-      else speak("I understand. I’m here with you.");
+      speak(
+        lang === "hi"
+          ? "Main samajh raha hoon. Aap akela nahi ho."
+          : "I understand. I’m here with you."
+      );
       break;
 
     case "EXIT":
