@@ -11,82 +11,57 @@ const recognition = new SpeechRecognition();
 
 recognition.lang = "en-IN";
 recognition.interimResults = false;
-recognition.maxAlternatives = 1;
+recognition.continuous = true;
 
 // ---------- SESSION ----------
 let unlocked = sessionStorage.getItem("unlocked") === "true";
 
-// ---------- EMAIL FLOW STATE ----------
+// ---------- EMAIL STATE ----------
 let emailStep = null;
-let emailData = {
-  to: "",
-  subject: "",
-  body: ""
-};
+let emailData = { to: "", subject: "", body: "" };
+
+// ---------- WHATSAPP STATE ----------
+let whatsappStep = null;
+let whatsappData = { to: "", message: "", attachment: false };
 
 // ---------- UTILITIES ----------
 function detectLanguage(text) {
-  const hindiChars = /[अ-ह]/;
-  const hindiWords = ["kya", "kaise", "hai", "nahi", "kar", "bata", "bolo"];
-
-  if (hindiChars.test(text)) return "hi";
+  const hindiWords = ["kya", "kaise", "hai", "nahi", "kar", "bhej", "bolo"];
   if (hindiWords.some(w => text.includes(w))) return "hinglish";
   return "en";
 }
 
-function speak(text, langMode = "en") {
+function speak(text, lang = "en") {
   const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = langMode === "hi" ? "hi-IN" : "en-IN";
+  msg.lang = lang === "hi" ? "hi-IN" : "en-IN";
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
   console.log("🤖 Bro:", text);
 }
 
-function askToRepeat(lang) {
-  if (lang === "hi") speak("Maaf kijiye, ek baar phir boliye", "hi");
-  else if (lang === "hinglish") speak("Sorry bhai, thoda repeat karo");
-  else speak("Sorry, can you repeat that?");
-}
-
 // ---------- INTENT ----------
 function getIntent(text) {
-  if (["bye", "exit"].some(w => text.includes(w))) return "EXIT";
-  if (["time", "samay"].some(w => text.includes(w))) return "TIME";
-  if (["play", "gaana", "song", "baja"].some(w => text.includes(w))) return "PLAY";
-  if (["joke"].some(w => text.includes(w))) return "JOKE";
-  if (["sad", "low"].some(w => text.includes(w))) return "MOOD_LOW";
-  if (["mail", "email", "send mail"].some(w => text.includes(w))) return "EMAIL";
+  if (text.includes("whatsapp")) return "WHATSAPP";
+  if (text.includes("mail") || text.includes("email")) return "EMAIL";
+  if (text.includes("time")) return "TIME";
+  if (text.includes("bye") || text.includes("exit")) return "EXIT";
   return "UNKNOWN";
 }
 
 // ---------- EMAIL FLOW ----------
-function handleEmailFlow(text, lang) {
+function handleEmailFlow(text) {
   if (emailStep === "to") {
     emailData.to = text.replace(/\s/g, "");
     emailStep = "subject";
-    speak(
-      lang === "hi"
-        ? "Email ka subject kya hoga?"
-        : lang === "hinglish"
-        ? "Mail ka subject batao"
-        : "What should be the subject?"
-    );
+    speak("What should be the subject?");
     return true;
   }
-
   if (emailStep === "subject") {
     emailData.subject = text;
     emailStep = "body";
-    speak(
-      lang === "hi"
-        ? "Email me kya likhna hai?"
-        : lang === "hinglish"
-        ? "Mail me kya likhu?"
-        : "What should I write in the email?"
-    );
+    speak("What should I write in the email?");
     return true;
   }
-
   if (emailStep === "body") {
     emailData.body = text;
     emailStep = null;
@@ -97,42 +72,65 @@ function handleEmailFlow(text, lang) {
       "&su=" + encodeURIComponent(emailData.subject) +
       "&body=" + encodeURIComponent(emailData.body);
 
-    speak(
-      lang === "hi"
-        ? "Maine email draft kar diya hai. Aap bhej sakte hain."
-        : lang === "hinglish"
-        ? "Mail draft kar diya bhai, check karke send kar do"
-        : "I have drafted the email. Please review and send."
-    );
-
+    speak("I have drafted the email. Please review and send.");
     window.open(url, "_blank");
     emailData = { to: "", subject: "", body: "" };
     return true;
   }
+  return false;
+}
 
+// ---------- WHATSAPP FLOW ----------
+function handleWhatsappFlow(text) {
+  if (whatsappStep === "to") {
+    whatsappData.to = text.replace(/\s/g, "");
+    whatsappStep = "message";
+    speak("What message should I send?");
+    return true;
+  }
+
+  if (whatsappStep === "message") {
+    whatsappData.message = text;
+    whatsappStep = "attachment";
+    speak("Do you want to attach any file? Say yes or no.");
+    return true;
+  }
+
+  if (whatsappStep === "attachment") {
+    whatsappData.attachment = text.includes("yes");
+
+    const url =
+      "https://wa.me/" +
+      whatsappData.to +
+      "?text=" +
+      encodeURIComponent(whatsappData.message);
+
+    if (whatsappData.attachment) {
+      speak("Opening WhatsApp. Please attach the file manually and send.");
+    } else {
+      speak("Opening WhatsApp. You can send the message now.");
+    }
+
+    window.open(url, "_blank");
+    whatsappStep = null;
+    whatsappData = { to: "", message: "", attachment: false };
+    return true;
+  }
   return false;
 }
 
 // ---------- MAIN LISTENER ----------
 recognition.onresult = (event) => {
-  const text = event.results[0][0].transcript.toLowerCase();
+  const text = event.results[event.results.length - 1][0].transcript.toLowerCase();
   status.innerText = "You: " + text;
 
-  const lang = detectLanguage(text);
-
-  // Email flow in progress
-  if (emailStep) {
-    handleEmailFlow(text, lang);
-    return;
-  }
+  // Ongoing flows
+  if (emailStep && handleEmailFlow(text)) return;
+  if (whatsappStep && handleWhatsappFlow(text)) return;
 
   // Wake word
-  if (!text.includes("bro")) {
-    askToRepeat(lang);
-    return;
-  }
+  if (!text.includes("bro")) return;
 
-  // Security once
   if (!unlocked) {
     speak("What's my gang");
     unlocked = true;
@@ -143,58 +141,35 @@ recognition.onresult = (event) => {
   const intent = getIntent(text);
 
   switch (intent) {
-    case "TIME":
-      const time = new Date().toLocaleTimeString("en-IN");
-      speak(
-        lang === "hi"
-          ? `Abhi samay hai ${time}`
-          : lang === "hinglish"
-          ? `Time hai ${time}`
-          : `The time is ${time}`
-      );
-      break;
-
-    case "PLAY":
-      speak(lang === "hi" ? "Gaana chala raha hoon" : "Playing music");
-      window.open("https://youtube.com", "_blank");
-      break;
-
     case "EMAIL":
       emailStep = "to";
-      speak(
-        lang === "hi"
-          ? "Kis ko email bhejna hai?"
-          : lang === "hinglish"
-          ? "Kisko mail bhejna hai?"
-          : "Whom should I send the email to?"
-      );
+      speak("Whom should I send the email to?");
       break;
 
-    case "JOKE":
-      speak(
-        lang === "hi"
-          ? "Computer thak kyun gaya? Kyunki usne bahut processing ki."
-          : "Why did the computer get tired? Too much processing."
-      );
+    case "WHATSAPP":
+      whatsappStep = "to";
+      speak("Whom should I send the WhatsApp message to?");
       break;
 
-    case "MOOD_LOW":
-      speak(
-        lang === "hi"
-          ? "Main samajh raha hoon. Aap akela nahi ho."
-          : "I understand. I’m here with you."
-      );
+    case "TIME":
+      speak("The time is " + new Date().toLocaleTimeString("en-IN"));
       break;
 
     case "EXIT":
-      speak(lang === "hi" ? "Alvida" : "Goodbye");
+      speak("Bye. Talk to you later.");
       sessionStorage.clear();
       unlocked = false;
+      recognition.stop();
       break;
 
     default:
-      askToRepeat(lang);
+      speak("I am listening. Please tell me what you want to do.");
   }
+};
+
+// ---------- AUTO RESTART LISTENING ----------
+recognition.onend = () => {
+  recognition.start();
 };
 
 // ---------- MIC ----------
