@@ -1,5 +1,5 @@
 /*********************************
- * BRO – SMART VOICE ASSISTANT (PWA)
+ * BRO – ADVANCED VOICE ASSISTANT
  *********************************/
 
 const status = document.getElementById("status");
@@ -15,6 +15,10 @@ recognition.continuous = true;
 
 // ---------- SESSION ----------
 let unlocked = sessionStorage.getItem("unlocked") === "true";
+let listening = false;
+
+// ---------- ACTION CONFIRM ----------
+let pendingAction = null;
 
 // ---------- EMAIL STATE ----------
 let emailStep = null;
@@ -24,16 +28,10 @@ let emailData = { to: "", subject: "", body: "" };
 let whatsappStep = null;
 let whatsappData = { to: "", message: "", attachment: false };
 
-// ---------- UTILITIES ----------
-function detectLanguage(text) {
-  const hindiWords = ["kya", "kaise", "hai", "nahi", "kar", "bhej", "bolo"];
-  if (hindiWords.some(w => text.includes(w))) return "hinglish";
-  return "en";
-}
-
-function speak(text, lang = "en") {
+// ---------- SPEAK ----------
+function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = lang === "hi" ? "hi-IN" : "en-IN";
+  msg.lang = "en-IN";
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
   console.log("🤖 Bro:", text);
@@ -44,7 +42,10 @@ function getIntent(text) {
   if (text.includes("whatsapp")) return "WHATSAPP";
   if (text.includes("mail") || text.includes("email")) return "EMAIL";
   if (text.includes("time")) return "TIME";
+  if (text.includes("stop listening")) return "STOP";
   if (text.includes("bye") || text.includes("exit")) return "EXIT";
+  if (text.includes("yes")) return "YES";
+  if (text.includes("no")) return "NO";
   return "UNKNOWN";
 }
 
@@ -56,27 +57,31 @@ function handleEmailFlow(text) {
     speak("What should be the subject?");
     return true;
   }
+
   if (emailStep === "subject") {
     emailData.subject = text;
     emailStep = "body";
     speak("What should I write in the email?");
     return true;
   }
+
   if (emailStep === "body") {
     emailData.body = text;
     emailStep = null;
 
-    const url =
-      "https://mail.google.com/mail/?view=cm&fs=1" +
-      "&to=" + encodeURIComponent(emailData.to) +
-      "&su=" + encodeURIComponent(emailData.subject) +
-      "&body=" + encodeURIComponent(emailData.body);
+    pendingAction = () => {
+      const url =
+        "https://mail.google.com/mail/?view=cm&fs=1" +
+        "&to=" + encodeURIComponent(emailData.to) +
+        "&su=" + encodeURIComponent(emailData.subject) +
+        "&body=" + encodeURIComponent(emailData.body);
+      window.open(url, "_blank");
+    };
 
-    speak("I have drafted the email. Please review and send.");
-    window.open(url, "_blank");
-    emailData = { to: "", subject: "", body: "" };
+    speak("Should I open the email now?");
     return true;
   }
+
   return false;
 }
 
@@ -92,43 +97,54 @@ function handleWhatsappFlow(text) {
   if (whatsappStep === "message") {
     whatsappData.message = text;
     whatsappStep = "attachment";
-    speak("Do you want to attach any file? Say yes or no.");
+    speak("Do you want to attach any file?");
     return true;
   }
 
   if (whatsappStep === "attachment") {
     whatsappData.attachment = text.includes("yes");
 
-    const url =
-      "https://wa.me/" +
-      whatsappData.to +
-      "?text=" +
-      encodeURIComponent(whatsappData.message);
+    pendingAction = () => {
+      const url =
+        "https://wa.me/" +
+        whatsappData.to +
+        "?text=" +
+        encodeURIComponent(whatsappData.message);
+      window.open(url, "_blank");
+    };
 
-    if (whatsappData.attachment) {
-      speak("Opening WhatsApp. Please attach the file manually and send.");
-    } else {
-      speak("Opening WhatsApp. You can send the message now.");
-    }
-
-    window.open(url, "_blank");
+    speak("Should I open WhatsApp now?");
     whatsappStep = null;
-    whatsappData = { to: "", message: "", attachment: false };
     return true;
   }
+
   return false;
 }
 
 // ---------- MAIN LISTENER ----------
 recognition.onresult = (event) => {
-  const text = event.results[event.results.length - 1][0].transcript.toLowerCase();
+  const text =
+    event.results[event.results.length - 1][0].transcript.toLowerCase();
   status.innerText = "You: " + text;
 
-  // Ongoing flows
+  // Confirmation step
+  if (pendingAction) {
+    const intent = getIntent(text);
+    if (intent === "YES") {
+      speak("Okay, doing it now.");
+      pendingAction();
+      pendingAction = null;
+    } else if (intent === "NO") {
+      speak("Cancelled.");
+      pendingAction = null;
+    }
+    return;
+  }
+
+  // Active flows
   if (emailStep && handleEmailFlow(text)) return;
   if (whatsappStep && handleWhatsappFlow(text)) return;
 
-  // Wake word
   if (!text.includes("bro")) return;
 
   if (!unlocked) {
@@ -155,25 +171,35 @@ recognition.onresult = (event) => {
       speak("The time is " + new Date().toLocaleTimeString("en-IN"));
       break;
 
+    case "STOP":
+      speak("Okay, I will stop listening.");
+      recognition.stop();
+      listening = false;
+      break;
+
     case "EXIT":
       speak("Bye. Talk to you later.");
       sessionStorage.clear();
       unlocked = false;
       recognition.stop();
+      listening = false;
       break;
 
     default:
-      speak("I am listening. Please tell me what you want to do.");
+      speak("I am listening. Tell me what you want to do.");
   }
 };
 
-// ---------- AUTO RESTART LISTENING ----------
+// ---------- AUTO RESTART ----------
 recognition.onend = () => {
-  recognition.start();
+  if (listening) recognition.start();
 };
 
 // ---------- MIC ----------
 mic.onclick = () => {
-  status.innerText = "Listening...";
-  recognition.start();
+  if (!listening) {
+    listening = true;
+    status.innerText = "Listening...";
+    recognition.start();
+  }
 };
