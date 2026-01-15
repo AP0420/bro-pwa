@@ -1,6 +1,6 @@
 /*********************************
  * BRO – SIRI STYLE VOICE ASSISTANT
- * STRICT SECURITY + WHATSAPP WEB
+ * SMART SECURITY (HOOD ≈ FOOD FIX)
  *********************************/
 
 const status = document.getElementById("status");
@@ -41,11 +41,23 @@ recognition.interimResults = false;
 recognition.continuous = true;
 
 let listening = false;
-let unlocked = false; // 🔒 STRICT: always false initially
+let unlocked = false;
 
 // ---------- SECURITY ----------
 const SECURITY_QUESTION = "What's up my gang?";
-const SECURITY_PASSWORD = "welcome to hood";
+
+// Acceptable STT variations for "hood"
+const HOOD_VARIANTS = ["hood", "food", "good", "home", "wood"];
+
+// ---------- PASSWORD CHECK ----------
+function isCorrectPassword(text) {
+  text = text.toLowerCase();
+
+  const hasWelcome = text.includes("welcome");
+  const hasHoodVariant = HOOD_VARIANTS.some(word => text.includes(word));
+
+  return hasWelcome && hasHoodVariant;
+}
 
 // ---------- WHATSAPP STATE ----------
 let whatsappStep = null;
@@ -81,12 +93,11 @@ function handleWhatsappFlow(text) {
     whatsappData.attachment = text.includes("yes");
 
     pendingAction = () => {
-      const message = encodeURIComponent(whatsappData.message);
       const url =
         "https://web.whatsapp.com/send?phone=" +
         whatsappData.to +
         "&text=" +
-        message;
+        encodeURIComponent(whatsappData.message);
 
       window.open(url, "_blank");
     };
@@ -105,15 +116,15 @@ recognition.onresult = (event) => {
     event.results[event.results.length - 1][0].transcript.toLowerCase();
   status.innerText = "You: " + text;
 
-  // 🔒 STRICT SECURITY MODE
+  // 🔐 STRICT SECURITY MODE
   if (!unlocked) {
-    if (text.includes(SECURITY_PASSWORD)) {
+    if (isCorrectPassword(text)) {
       unlocked = true;
       speak("Welcome AP");
     } else {
       speak(SECURITY_QUESTION);
     }
-    return; // 🚫 NOTHING ELSE RUNS
+    return;
   }
 
   // Confirmation step
@@ -133,7 +144,7 @@ recognition.onresult = (event) => {
   // Active WhatsApp flow
   if (whatsappStep && handleWhatsappFlow(text)) return;
 
-  // Wake word required AFTER unlock
+  // Wake word AFTER unlock
   if (!text.includes("bro")) return;
 
   const intent = getIntent(text);
