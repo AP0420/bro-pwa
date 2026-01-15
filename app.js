@@ -1,10 +1,24 @@
 /*********************************
  * BRO – ADVANCED VOICE ASSISTANT
+ * (Logic + UI Animations)
  *********************************/
 
 const status = document.getElementById("status");
 const mic = document.getElementById("mic");
+const wave = document.getElementById("wave");
 
+// ---------- UI ANIMATION CONTROLS ----------
+function uiListening(on) {
+  if (on) {
+    mic.classList.add("listening");
+    wave.classList.remove("hidden");
+  } else {
+    mic.classList.remove("listening");
+    wave.classList.add("hidden");
+  }
+}
+
+// ---------- SPEECH RECOGNITION ----------
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = new SpeechRecognition();
@@ -28,10 +42,17 @@ let emailData = { to: "", subject: "", body: "" };
 let whatsappStep = null;
 let whatsappData = { to: "", message: "", attachment: false };
 
+// ---------- LANGUAGE DETECTION ----------
+function detectLanguage(text) {
+  const hindiWords = ["kya", "kaise", "hai", "nahi", "kar", "bhej", "bolo"];
+  if (hindiWords.some(w => text.includes(w))) return "hinglish";
+  return "en";
+}
+
 // ---------- SPEAK ----------
-function speak(text) {
+function speak(text, lang = "en") {
   const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "en-IN";
+  msg.lang = lang === "hi" ? "hi-IN" : "en-IN";
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
   console.log("🤖 Bro:", text);
@@ -175,6 +196,7 @@ recognition.onresult = (event) => {
       speak("Okay, I will stop listening.");
       recognition.stop();
       listening = false;
+      uiListening(false);
       break;
 
     case "EXIT":
@@ -183,16 +205,18 @@ recognition.onresult = (event) => {
       unlocked = false;
       recognition.stop();
       listening = false;
+      uiListening(false);
       break;
 
     default:
-      speak("I am listening. Tell me what you want to do.");
+      speak("I am listening. Please tell me what you want to do.");
   }
 };
 
 // ---------- AUTO RESTART ----------
 recognition.onend = () => {
   if (listening) recognition.start();
+  uiListening(false);
 };
 
 // ---------- MIC ----------
@@ -200,6 +224,7 @@ mic.onclick = () => {
   if (!listening) {
     listening = true;
     status.innerText = "Listening...";
+    uiListening(true);
     recognition.start();
   }
 };
