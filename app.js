@@ -41,6 +41,13 @@ const orbLocked = () => orb.className = "orb locked";
 async function initFaceDetection() {
   try {
     faceStatus.innerText = "Loading face detection model...";
+    // Check if blazeface is available
+    if (typeof blazeface === 'undefined') {
+      faceStatus.innerText = "Face model not loaded. Please check if blazeface.js is included.";
+      debugLog("❌ Blazeface not loaded. Make sure to include blazeface.js in your HTML");
+      return;
+    }
+    
     blazefaceModel = await blazeface.load();
     faceStatus.innerText = "Starting camera...";
     
@@ -52,12 +59,17 @@ async function initFaceDetection() {
     // Check if face was previously saved
     const saved = localStorage.getItem("userFaceData");
     if (saved) {
-      savedFaceDescriptor = JSON.parse(saved);
-      faceStatus.innerText = "Face recognized! Click 'Verify Face' to unlock";
-      verifyFaceBtn.style.display = "inline-block";
+      try {
+        savedFaceDescriptor = JSON.parse(saved);
+        faceStatus.innerText = "Face recognized! Click 'Verify Face' to unlock";
+        if (verifyFaceBtn) verifyFaceBtn.style.display = "inline-block";
+      } catch (e) {
+        debugLog("Error parsing saved face data: " + e.message);
+        localStorage.removeItem("userFaceData");
+      }
     } else {
       faceStatus.innerText = "No face setup. Click 'Setup My Face' to register";
-      setupFaceBtn.style.display = "inline-block";
+      if (setupFaceBtn) setupFaceBtn.style.display = "inline-block";
     }
     
   } catch (error) {
@@ -69,16 +81,27 @@ async function initFaceDetection() {
 async function detectFace() {
   if (!blazefaceModel) return null;
   
+  if (cameraFeed.videoWidth === 0 || cameraFeed.videoHeight === 0) {
+    debugLog("Camera feed not ready");
+    return null;
+  }
+  
   canvas.width = cameraFeed.videoWidth;
   canvas.height = cameraFeed.videoHeight;
   ctx.drawImage(cameraFeed, 0, 0);
   
-  const predictions = await blazefaceModel.estimateFaces(canvas, false);
-  return predictions.length > 0 ? predictions[0] : null;
+  try {
+    const predictions = await blazefaceModel.estimateFaces(canvas, false);
+    return predictions.length > 0 ? predictions[0] : null;
+  } catch (error) {
+    debugLog("Face detection failed: " + error.message);
+    return null;
+  }
 }
 
 function getFaceDescriptor(prediction) {
-  // Simple descriptor using face landmarks
+  if (!prediction || !prediction.landmarks) return null;
+  
   const landmarks = prediction.landmarks;
   return {
     leftEye: landmarks[0],
@@ -91,7 +114,8 @@ function getFaceDescriptor(prediction) {
 }
 
 function compareFaces(face1, face2) {
-  // Simple Euclidean distance comparison
+  if (!face1 || !face2) return false;
+  
   let totalDistance = 0;
   const points = ['leftEye', 'rightEye', 'nose', 'mouth', 'leftEar', 'rightEar'];
   
@@ -105,71 +129,73 @@ function compareFaces(face1, face2) {
   return avgDistance < 30; // Threshold for matching
 }
 
-setupFaceBtn.onclick = async () => {
-  faceStatus.innerText = "Look at the camera and hold still...";
-  setupFaceBtn.disabled = true;
-  
-  setTimeout(async () => {
-    const face = await detectFace();
-    if (face) {
-      savedFaceDescriptor = getFaceDescriptor(face);
-      localStorage.setItem("userFaceData", JSON.stringify(savedFaceDescriptor));
-      faceStatus.innerText = "✅ Face registered! Click 'Verify Face' to unlock";
-      setupFaceBtn.style.display = "none";
-      verifyFaceBtn.style.display = "inline-block";
-    } else {
-      faceStatus.innerText = "❌ No face detected. Please try again.";
-      setupFaceBtn.disabled = false;
-    }
-  }, 2000);
-};
-
-verifyFaceBtn.onclick = async () => {
-  faceStatus.innerText = "Verifying your face...";
-  verifyFaceBtn.disabled = true;
-  
-  let attempts = 0;
-  const maxAttempts = 3;
-  let foundFace = false;
-  let matchFound = false;
-  
-  const verifyInterval = setInterval(async () => {
-    const face = await detectFace();
-    attempts++;
+if (setupFaceBtn) {
+  setupFaceBtn.onclick = async () => {
+    faceStatus.innerText = "Look at the camera and hold still...";
+    setupFaceBtn.disabled = true;
     
-    if (face && savedFaceDescriptor) {
-      foundFace = true;
-      const currentDescriptor = getFaceDescriptor(face);
-      const isMatch = compareFaces(savedFaceDescriptor, currentDescriptor);
+    setTimeout(async () => {
+      const face = await detectFace();
+      if (face) {
+        savedFaceDescriptor = getFaceDescriptor(face);
+        localStorage.setItem("userFaceData", JSON.stringify(savedFaceDescriptor));
+        faceStatus.innerText = "✅ Face registered! Click 'Verify Face' to unlock";
+        setupFaceBtn.style.display = "none";
+        verifyFaceBtn.style.display = "inline-block";
+      } else {
+        faceStatus.innerText = "❌ No face detected. Please try again.";
+        setupFaceBtn.disabled = false;
+      }
+    }, 2000);
+  };
+}
+
+if (verifyFaceBtn) {
+  verifyFaceBtn.onclick = async () => {
+    faceStatus.innerText = "Verifying your face...";
+    verifyFaceBtn.disabled = true;
+    
+    let attempts = 0;
+    const maxAttempts = 3;
+    let verificationComplete = false;
+    
+    const verifyInterval = setInterval(async () => {
+      const face = await detectFace();
+      attempts++;
       
-      if (isMatch) {
-        faceStatus.innerText = "✅ Face verified! Access granted";
-        clearInterval(verifyInterval);
-        failedAttempts = 0; // Reset failed attempts on success
-        unlockApp();
-        matchFound = true;
+      if (face && savedFaceDescriptor) {
+        const currentDescriptor = getFaceDescriptor(face);
+        const isMatch = compareFaces(savedFaceDescriptor, currentDescriptor);
+        
+        if (isMatch) {
+          faceStatus.innerText = "✅ Face verified! Access granted";
+          clearInterval(verifyInterval);
+          failedAttempts = 0;
+          unlockApp();
+          verificationComplete = true;
+        } else if (attempts >= maxAttempts) {
+          clearInterval(verifyInterval);
+          failedAttempts++;
+          
+          if (failedAttempts >= maxFailedAttempts) {
+            showSecurityAlert();
+          } else {
+            faceStatus.innerText = `❌ ACCESS DENIED! Unrecognized face detected. (${failedAttempts}/${maxFailedAttempts} attempts)`;
+            const msg = new SpeechSynthesisUtterance("Access denied! Unrecognized face detected.");
+            msg.rate = 1.2;
+            msg.pitch = 0.8;
+            speechSynthesis.speak(msg);
+            verifyFaceBtn.disabled = false;
+          }
+        }
       } else if (attempts >= maxAttempts) {
         clearInterval(verifyInterval);
-        failedAttempts++;
-        
-        if (failedAttempts >= maxFailedAttempts) {
-          showSecurityAlert();
-        } else {
-          faceStatus.innerText = `❌ ACCESS DENIED! Unrecognized face detected. (${failedAttempts}/${maxFailedAttempts} attempts)`;
-          const msg = new SpeechSynthesisUtterance("Access denied! Unrecognized face detected.");
-          msg.rate = 1.2;
-          msg.pitch = 0.8;
-          speechSynthesis.speak(msg);
-          verifyFaceBtn.disabled = false;
-        }
+        faceStatus.innerText = "❌ No face detected. Try again.";
+        verifyFaceBtn.disabled = false;
       }
-    } else if (attempts >= maxAttempts) {
-      clearInterval(verifyInterval);
-      faceStatus.innerText = "❌ No face detected. Try again.";
-      verifyFaceBtn.disabled = false;
-    }
-  }, 1000);
-};
+    }, 1000);
+  };
+}
 
 function showSecurityAlert() {
   // Hide camera feed
@@ -215,45 +241,14 @@ function showSecurityAlert() {
 
 function resetSecurity() {
   failedAttempts = 0;
-  faceOverlay.innerHTML = `
-    <h1>🔐 Face Authentication</h1>
-    <div id="faceStatus" class="face-status">Ready to verify</div>
-    <div class="camera-container">
-      <video id="cameraFeed" autoplay playsinline></video>
-      <canvas id="canvas"></canvas>
-    </div>
-    <div class="setup-buttons">
-      <button id="setupFaceBtn" style="display:none;">Setup My Face</button>
-      <button id="verifyFaceBtn">Verify Face</button>
-      <button id="skipAuthBtn">Skip Authentication (Demo Mode)</button>
-    </div>
-  `;
-  
-  // Re-initialize all elements and event listeners
-  const newFaceStatus = document.getElementById("faceStatus");
-  const newCameraFeed = document.getElementById("cameraFeed");
-  const newCanvas = document.getElementById("canvas");
-  const newSetupFaceBtn = document.getElementById("setupFaceBtn");
-  const newVerifyFaceBtn = document.getElementById("verifyFaceBtn");
-  const newSkipAuthBtn = document.getElementById("skipAuthBtn");
-  
-  // Re-assign event listeners
-  newVerifyFaceBtn.onclick = verifyFaceBtn.onclick;
-  newSkipAuthBtn.onclick = skipAuthBtn.onclick;
-  if (newSetupFaceBtn) newSetupFaceBtn.onclick = setupFaceBtn.onclick;
-  
-  // Restart camera
-  navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-    .then(s => {
-      stream = s;
-      newCameraFeed.srcObject = stream;
-      newFaceStatus.innerText = "Face system reset. Click 'Verify Face' to try again.";
-    });
+  location.reload(); // Reload the page to reinitialize everything
 }
 
-skipAuthBtn.onclick = () => {
-  unlockApp();
-};
+if (skipAuthBtn) {
+  skipAuthBtn.onclick = () => {
+    unlockApp();
+  };
+}
 
 function unlockApp() {
   isAuthenticated = true;
@@ -265,9 +260,11 @@ function unlockApp() {
   }
   
   orbIdle();
-  toggleBtn.disabled = false;
-  toggleBtn.innerText = "Start Listening";
-  lockBtn.style.display = "inline-block";
+  if (toggleBtn) {
+    toggleBtn.disabled = false;
+    toggleBtn.innerText = "Start Listening";
+  }
+  if (lockBtn) lockBtn.style.display = "inline-block";
   status.innerText = "✅ Authenticated! Ready to use";
   
   speak("Authentication successful. Hello, I am Bro.", "en-IN");
@@ -277,12 +274,14 @@ function lockApp() {
   isAuthenticated = false;
   stopRecognition();
   orbLocked();
-  toggleBtn.disabled = true;
-  toggleBtn.innerText = "🔒 Locked";
-  lockBtn.style.display = "none";
+  if (toggleBtn) {
+    toggleBtn.disabled = true;
+    toggleBtn.innerText = "🔒 Locked";
+  }
+  if (lockBtn) lockBtn.style.display = "none";
   status.innerText = "🔒 App locked";
   faceOverlay.classList.remove("hidden");
-  verifyFaceBtn.disabled = false;
+  if (verifyFaceBtn) verifyFaceBtn.disabled = false;
   initFaceDetection();
 }
 
@@ -400,7 +399,9 @@ function startRecognition() {
       fullTranscript = final + interim;
       const text = fullTranscript.toLowerCase().trim();
       
-      transcriptEl.innerText = text || "—";
+      if (transcriptEl) {
+        transcriptEl.innerText = text || "—";
+      }
 
       const command = extractCommand(text);
       if (command && command !== lastProcessedCommand) {
@@ -678,148 +679,169 @@ function handleCommand(command) {
   }
 
   /* ---- STOP/SHUTDOWN ---- */
-  if (/stop|shutdown|band karo|ch
-      up|quiet/i.test(command)) {
-speak(
-lang === "hi-IN"
-? "Theek hai, main band ho raha hoon. Dobara milenge!"
-: "Okay, shutting down. See you later!",
-lang,
-() => {
-stopRecognition();
-toggleBtn.innerText = "Start Listening";
-}
-);
-return;
-}
-/* ---- TIME ---- */
-if (/what.*time|time|samay|kitna baj/i.test(command)) {
-const time = new Date().toLocaleTimeString("en-IN", {
-hour: '2-digit',
-minute: '2-digit'
-});
-speak(
-lang === "hi-IN" ? Abhi ${time} baj rahe hain : The time is ${time},
-lang,
-() => { if (isListening) startRecognition(); }
-);
-return;
-}
-/* ---- DATE ---- */
-if (/what.*date|today.*date|date|tarikh|aaj ki tarikh/i.test(command)) {
-const date = new Date().toLocaleDateString("en-IN", {
-weekday: 'long',
-year: 'numeric',
-month: 'long',
-day: 'numeric'
-});
-speak(
-lang === "hi-IN" ? Aaj ki tarikh hai ${date} : Today's date is ${date},
-lang,
-() => { if (isListening) startRecognition(); }
-);
-return;
-}
-/* ---- MUSIC/PLAY ---- */
-if (/play|chalao|chala|song|music|gaana/i.test(command)) {
-const query = command
-.replace(/play|chalao|chala|song|music|gaana/gi, "")
-.trim() || "music";
-speak(
-  lang === "hi-IN" ? "Music chala raha hun" : "Playing music",
-  lang,
-  () => {
-    window.open(
-      `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-      "_blank"
+  if (/stop|shutdown|band karo|chup|quiet/i.test(command)) {
+    speak(
+      lang === "hi-IN"
+        ? "Theek hai, main band ho raha hoon. Dobara milenge!"
+        : "Okay, shutting down. See you later!",
+      lang,
+      () => {
+        stopRecognition();
+        if (toggleBtn) toggleBtn.innerText = "Start Listening";
+      }
     );
-    if (isListening) setTimeout(startRecognition, 1000);
+    return;
   }
-);
-return;
-}
-/* ---- WHATSAPP ---- */
-if (/whatsapp|message|msg|bhej|send/i.test(command)) {
-speak(
-lang === "hi-IN" ? "WhatsApp khol raha hun" : "Opening WhatsApp",
-lang,
-() => {
-window.open("https://web.whatsapp.com", "_blank");
-if (isListening) setTimeout(startRecognition, 1000);
-}
-);
-return;
-}
-/* ---- ASSEMBLE ---- */
-if (/assemble|asemble|asembl|sembl|sambal/i.test(command)) {
-speak(
-lang === "hi-IN" ? "Sab links khol raha hun" : "Opening all work links",
-lang,
-() => {
-const links = [
-"http://outlook.office.com/mail/inbox/id/AAQkADY1ODE5YTg5LWE0ZWItNDczMy05OGNjLTk5YzkxNzMzNDJmNAAQAEUrUSYfY2dJq6PVcGU9qu8%3D",
-"https://web.whatsapp.com/",
-"https://console.acefone.in/livecalls",
-"https://crmadmin.oneandro.com/user-management",
-"https://desk.zoho.in/agent/oneandro/oneandro-support/tickets/new"
-];
-    links.forEach((link, index) => {
-      setTimeout(() => {
-        window.open(link, "_blank");
-      }, index * 500);
+  
+  /* ---- TIME ---- */
+  if (/what.*time|time|samay|kitna baj/i.test(command)) {
+    const time = new Date().toLocaleTimeString("en-IN", {
+      hour: '2-digit',
+      minute: '2-digit'
     });
-    
-    if (isListening) setTimeout(startRecognition, 3000);
+    speak(
+      lang === "hi-IN" ? `Abhi ${time} baj rahe hain` : `The time is ${time}`,
+      lang,
+      () => { if (isListening) startRecognition(); }
+    );
+    return;
   }
-);
-return;
+  
+  /* ---- DATE ---- */
+  if (/what.*date|today.*date|date|tarikh|aaj ki tarikh/i.test(command)) {
+    const date = new Date().toLocaleDateString("en-IN", {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    speak(
+      lang === "hi-IN" ? `Aaj ki tarikh hai ${date}` : `Today's date is ${date}`,
+      lang,
+      () => { if (isListening) startRecognition(); }
+    );
+    return;
+  }
+  
+  /* ---- MUSIC/PLAY ---- */
+  if (/play|chalao|chala|song|music|gaana/i.test(command)) {
+    const query = command
+      .replace(/play|chalao|chala|song|music|gaana/gi, "")
+      .trim() || "music";
+    speak(
+      lang === "hi-IN" ? "Music chala raha hun" : "Playing music",
+      lang,
+      () => {
+        window.open(
+          `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+          "_blank"
+        );
+        if (isListening) setTimeout(startRecognition, 1000);
+      }
+    );
+    return;
+  }
+  
+  /* ---- WHATSAPP ---- */
+  if (/whatsapp|message|msg|bhej|send/i.test(command)) {
+    speak(
+      lang === "hi-IN" ? "WhatsApp khol raha hun" : "Opening WhatsApp",
+      lang,
+      () => {
+        window.open("https://web.whatsapp.com", "_blank");
+        if (isListening) setTimeout(startRecognition, 1000);
+      }
+    );
+    return;
+  }
+  
+  /* ---- ASSEMBLE ---- */
+  if (/assemble|asemble|asembl|sembl|sambal/i.test(command)) {
+    speak(
+      lang === "hi-IN" ? "Sab links khol raha hun" : "Opening all work links",
+      lang,
+      () => {
+        const links = [
+          "http://outlook.office.com/mail/inbox/id/AAQkADY1ODE5YTg5LWE0ZWItNDczMy05OGNjLTk5YzkxNzMzNDJmNAAQAEUrUSYfY2dJq6PVcGU9qu8%3D",
+          "https://web.whatsapp.com/",
+          "https://console.acefone.in/livecalls",
+          "https://crmadmin.oneandro.com/user-management",
+          "https://desk.zoho.in/agent/oneandro/oneandro-support/tickets/new"
+        ];
+        links.forEach((link, index) => {
+          setTimeout(() => {
+            window.open(link, "_blank");
+          }, index * 500);
+        });
+        
+        if (isListening) setTimeout(startRecognition, 3000);
+      }
+    );
+    return;
+  }
+  
+  /* ---- NEARBY/MAPS ---- */
+  if (/nearby|near me|paas|najdeek|dikhao/i.test(command)) {
+    speak(
+      lang === "hi-IN" ? "Aas paas ki jagah dikha raha hun" : "Showing nearby places",
+      lang,
+      () => {
+        window.open(
+          `https://www.google.com/maps/search/${encodeURIComponent(command)}`,
+          "_blank"
+        );
+        if (isListening) setTimeout(startRecognition, 1000);
+      }
+    );
+    return;
+  }
+  
+  /* ---- FALLBACK ---- */
+  speak(
+    lang === "hi-IN"
+      ? "Samajh nahi aaya, kripya dobara boliye. Aap mujhse time, date, music, WhatsApp, ya help ke baare mein pooch sakte hain."
+      : "I didn't understand that, please try again. You can ask me about time, date, music, WhatsApp, or say help to know more.",
+    lang,
+    () => { if (isListening) startRecognition(); }
+  );
 }
-/* ---- NEARBY/MAPS ---- */
-if (/nearby|near me|paas|najdeek|dikhao/i.test(command)) {
-speak(
-lang === "hi-IN" ? "Aas paas ki jagah dikha raha hun" : "Showing nearby places",
-lang,
-() => {
-window.open(
-https://www.google.com/maps/search/${encodeURIComponent(command)},
-"_blank"
-);
-if (isListening) setTimeout(startRecognition, 1000);
+
+if (toggleBtn) {
+  toggleBtn.onclick = function() {
+    if (!isAuthenticated) return;
+    if (isListening) {
+      stopRecognition();
+      toggleBtn.innerText = "Start Listening";
+    } else {
+      isListening = true;
+      toggleBtn.innerText = "Stop Listening";
+      lastProcessedCommand = "";
+      startRecognition();
+    }
+  };
 }
-);
-return;
+
+if (lockBtn) {
+  lockBtn.onclick = lockApp;
 }
-/* ---- FALLBACK ---- */
-speak(
-lang === "hi-IN"
-? "Samajh nahi aaya, kripya dobara boliye. Aap mujhse time, date, music, WhatsApp, ya help ke baare mein pooch sakte hain."
-: "I didn't understand that, please try again. You can ask me about time, date, music, WhatsApp, or say help to know more.",
-lang,
-() => { if (isListening) startRecognition(); }
-);
-}
-function toggleListening() {
-if (!isAuthenticated) return;
-if (isListening) {
-stopRecognition();
-toggleBtn.innerText = "Start Listening";
-} else {
-isListening = true;
-toggleBtn.innerText = "Stop Listening";
-lastProcessedCommand = "";
-startRecognition();
-}
-}
+
 /* ---------- INIT ---------- */
-window.onload = () => {
-if (!SpeechRecognition) {
-status.innerText = "❌ Speech recognition not supported";
-debugLog("❌ SpeechRecognition API not available");
-return;
-}
-debugLog("✅ App initialized");
-status.innerText = "🔒 Locked - Authenticate to use";
-orbLocked();
-// Start face detection
-initFaceDetection();
-};
+window.addEventListener('load', () => {
+  if (!SpeechRecognition) {
+    status.innerText = "❌ Speech recognition not supported";
+    debugLog("❌ SpeechRecognition API not available");
+    return;
+  }
+  
+  debugLog("✅ App initialized");
+  status.innerText = "🔒 Locked - Authenticate to use";
+  orbLocked();
+  
+  // Start face detection
+  initFaceDetection();
+});
+
+// Make functions available globally
+window.resetSecurity = resetSecurity;
+window.unlockApp = unlockApp;
+window.lockApp = lockApp;
