@@ -1,29 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bro – Your Personal Assistant</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bro - Voice Assistant</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app">
-    <!-- Siri Orb -->
-    <div id="siriOrb" class="siri-orb idle">
-      <div class="outer-glow"></div>
-      <div class="base-sphere"></div>
-      <div class="gradient-sphere sphere-1"></div>
-      <div class="gradient-sphere sphere-2"></div>
-      <div class="gradient-sphere sphere-3"></div>
-      <div class="gradient-sphere sphere-4"></div>
-      <div class="center-glow"></div>
+  <div class="container">
+    <h1>🎤 BRO</h1>
+    <div id="status">Initializing...</div>
+    
+    <div class="orb-container">
+      <div id="orb" class="orb idle"></div>
+    </div>
+    
+    <div class="controls">
+      <button id="toggleBtn" onclick="toggleListening()">Start Listening</button>
+    </div>
+    
+    <div class="transcript">
+      <div class="transcript-label">You said:</div>
+      <div id="transcript" class="transcript-text">—</div>
     </div>
 
-    <!-- Status -->
-    <div id="status">Hey, I'm listening</div>
-
-    <!-- Mic button -->
-    <button id="mic">Tap to Talk</button>
+    <div class="debug" id="debug">Debug log will appear here...</div>
   </div>
 
   <script src="app.js"></script>
