@@ -1,207 +1,87 @@
-* {
+/* ===== GLOBAL ===== */
+body {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  font-family: "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #0f2027, #000000);
   color: white;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.container {
+/* ===== CONTAINER ===== */
+.app {
   text-align: center;
-  padding: 20px;
 }
 
-h1 {
-  font-size: 3rem;
-  margin-bottom: 10px;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
-
+/* ===== STATUS TEXT ===== */
 #status {
-  font-size: 1.2rem;
-  margin: 20px 0;
-  min-height: 30px;
-  opacity: 0.9;
+  margin-top: 20px;
+  font-size: 16px;
+  opacity: 0.85;
 }
 
-.orb-container {
-  margin: 40px 0;
-}
-
+/* ===== ORB ===== */
 .orb {
-  width: 200px;
-  height: 200px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
-  margin: 0 auto;
-  position: relative;
-  transition: all 0.3s ease;
+  margin: auto;
+  background: radial-gradient(circle, #4facfe, #00f2fe);
+  box-shadow: 0 0 30px rgba(79, 172, 254, 0.6);
+  transition: all 0.4s ease;
 }
 
+/* ===== ORB STATES ===== */
 .orb.idle {
-  background: radial-gradient(circle, #a78bfa, #7c3aed);
-  box-shadow: 0 0 30px rgba(167, 139, 250, 0.5);
-  animation: pulse 2s infinite;
+  animation: idleGlow 3s infinite ease-in-out;
 }
 
 .orb.listening {
-  background: radial-gradient(circle, #34d399, #10b981);
-  box-shadow: 0 0 50px rgba(52, 211, 153, 0.8);
-  animation: listening 1s infinite;
+  animation: listeningPulse 1.4s infinite;
+  background: radial-gradient(circle, #00f2fe, #4facfe);
 }
 
 .orb.speaking {
-  background: radial-gradient(circle, #fb923c, #f97316);
-  box-shadow: 0 0 50px rgba(251, 146, 60, 0.8);
-  animation: speaking 0.5s infinite;
+  animation: speakingPulse 0.9s infinite;
+  background: radial-gradient(circle, #a855f7, #6366f1);
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+/* ===== ANIMATIONS ===== */
+@keyframes idleGlow {
+  0% { box-shadow: 0 0 20px rgba(79,172,254,0.4); }
+  50% { box-shadow: 0 0 35px rgba(79,172,254,0.8); }
+  100% { box-shadow: 0 0 20px rgba(79,172,254,0.4); }
 }
 
-@keyframes listening {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 50px rgba(52, 211, 153, 0.8); }
-  50% { transform: scale(1.1); box-shadow: 0 0 80px rgba(52, 211, 153, 1); }
+@keyframes listeningPulse {
+  0% { transform: scale(1); box-shadow: 0 0 30px #00f2fe; }
+  50% { transform: scale(1.15); box-shadow: 0 0 60px #00f2fe; }
+  100% { transform: scale(1); box-shadow: 0 0 30px #00f2fe; }
 }
 
-@keyframes speaking {
-  0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.05); }
-  75% { transform: scale(0.95); }
+@keyframes speakingPulse {
+  0% { transform: scale(1); box-shadow: 0 0 40px #a855f7; }
+  50% { transform: scale(1.2); box-shadow: 0 0 70px #a855f7; }
+  100% { transform: scale(1); box-shadow: 0 0 40px #a855f7; }
 }
 
-.controls {
+/* ===== MIC BUTTON ===== */
+#mic {
   margin-top: 30px;
-}
-
-button {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid white;
-  color: white;
-  padding: 15px 30px;
-  font-size: 1.1rem;
-  border-radius: 50px;
+  padding: 12px 22px;
+  font-size: 15px;
+  border-radius: 30px;
+  border: none;
   cursor: pointer;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: black;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+#mic:hover {
   transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(79,172,254,0.8);
 }
-
-button:active {
-  transform: scale(0.95);
-}
-
-.transcript {
-  margin-top: 30px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.transcript-label {
-  font-size: 0.9rem;
-  opacity: 0.8;
-  margin-bottom: 10px;
-}
-
-.transcript-text {
-  font-size: 1.1rem;
-  min-height: 30px;
-}
-
-.debug {
-  margin-top: 20px;
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
-  font-size: 0.9rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: left;
-  max-height: 200px;
-  overflow-y: auto;
-}
-```
-
-### 3. **app.js**
-(Use the JavaScript code I provided in the previous message)
-
----
-
-## 🚀 Deployment Options
-
-### **Option 1: GitHub Pages (FREE & Easy)**
-
-1. Create a GitHub account (if you don't have one)
-2. Create a new repository (e.g., "bro-voice-assistant")
-3. Upload these 3 files: `index.html`, `style.css`, `app.js`
-4. Go to Settings → Pages
-5. Select "main" branch and save
-6. Your site will be live at: `https://yourusername.github.io/bro-voice-assistant`
-
-### **Option 2: Netlify (FREE & Very Easy)**
-
-1. Go to [netlify.com](https://netlify.com)
-2. Sign up (free)
-3. Drag and drop your folder containing all 3 files
-4. Your site is live instantly!
-
-### **Option 3: Vercel (FREE)**
-
-1. Go to [vercel.com](https://vercel.com)
-2. Sign up with GitHub
-3. Import your repository
-4. Deploy!
-
-### **Option 4: Local Server (for testing)**
-
-1. Install Python (if not installed)
-2. Open terminal in your project folder
-3. Run: `python -m http.server 8000`
-4. Open browser: `http://localhost:8000`
-
----
-
-## ⚠️ Important Notes
-
-### **HTTPS Required**
-- Voice recognition **ONLY works on HTTPS** (not HTTP)
-- GitHub Pages, Netlify, and Vercel all provide HTTPS automatically
-- Local testing works on `localhost`
-
-### **Browser Support**
-- Works best on **Chrome** or **Edge**
-- Limited support on Firefox
-- **Safari has issues** with Web Speech API
-
-### **Permissions**
-- Browser will ask for microphone permission
-- Click "Allow" when prompted
-
----
-
-## 📂 Final Folder Structure
-```
-bro-voice-assistant/
-├── index.html
-├── style.css
-└── app.js
