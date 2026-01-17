@@ -1,6 +1,6 @@
 /*********************************
- * BRO – SIRI STYLE VOICE ASSISTANT
- * FULL LISTEN → SINGLE RESPONSE
+ * BRO – STABLE VOICE ASSISTANT
+ * SILENCE-DETECTION BASED RESPONSE
  *********************************/
 
 const status = document.getElementById("status");
@@ -8,15 +8,9 @@ const mic = document.getElementById("mic");
 const orb = document.getElementById("orb");
 
 // ---------- ORB STATES ----------
-function orbIdle() {
-  orb.className = "orb idle";
-}
-function orbListening() {
-  orb.className = "orb listening";
-}
-function orbSpeaking() {
-  orb.className = "orb speaking";
-}
+function orbIdle() { orb.className = "orb idle"; }
+function orbListening() { orb.className = "orb listening"; }
+function orbSpeaking() { orb.className = "orb speaking"; }
 
 // ---------- SPEAK ----------
 function speak(text) {
@@ -37,15 +31,15 @@ const SpeechRecognition =
 
 const recognition = new SpeechRecognition();
 recognition.lang = "en-IN";
-recognition.interimResults = true;   // ✅ IMPORTANT
+recognition.interimResults = true;
 recognition.continuous = true;
 
 let listening = false;
 let unlocked = false;
 
 // ---------- SPEECH BUFFER ----------
-let finalTranscript = "";
-let isProcessing = false;
+let transcriptBuffer = "";
+let silenceTimer = null;
 
 // ---------- SECURITY ----------
 const SECURITY_QUESTION = "What's up my gang?";
@@ -59,52 +53,37 @@ function isCorrectPassword(text) {
   );
 }
 
-// ---------- WHATSAPP STATE ----------
+// ---------- WHATSAPP ----------
 let whatsappStep = null;
-let whatsappData = { to: "", message: "", attachment: false };
+let whatsappData = { to: "", message: "" };
 let pendingAction = null;
 
-// ---------- COLLECT SPEECH ----------
+// ---------- SPEECH INPUT ----------
 recognition.onresult = (event) => {
-  let interim = "";
+  clearTimeout(silenceTimer);
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
-    const transcript = event.results[i][0].transcript.toLowerCase();
-    if (event.results[i].isFinal) {
-      finalTranscript += transcript + " ";
-    } else {
-      interim += transcript;
+    transcriptBuffer += event.results[i][0].transcript.toLowerCase() + " ";
+  }
+
+  status.innerText = "You: " + transcriptBuffer.trim();
+
+  // 🔕 silence detection (user stopped speaking)
+  silenceTimer = setTimeout(() => {
+    const finalText = transcriptBuffer.trim();
+    transcriptBuffer = "";
+
+    if (finalText) {
+      processUserInput(finalText);
     }
-  }
-
-  status.innerText = "You: " + (finalTranscript || interim);
-};
-
-// ---------- PROCESS AFTER USER STOPS ----------
-recognition.onend = () => {
-  if (!finalTranscript || isProcessing) {
-    recognition.start();
-    return;
-  }
-
-  isProcessing = true;
-
-  const text = finalTranscript.trim();
-  finalTranscript = "";
-
-  processUserInput(text);
-
-  setTimeout(() => {
-    isProcessing = false;
-    recognition.start();
-  }, 800);
+  }, 1000); // 1 second silence
 };
 
 // ---------- MAIN BRAIN ----------
 function processUserInput(text) {
   console.log("FINAL INPUT:", text);
 
-  // 🔐 STRICT SECURITY (NO BYPASS)
+  // 🔐 SECURITY (STRICT)
   if (!unlocked) {
     if (isCorrectPassword(text)) {
       unlocked = true;
@@ -115,7 +94,7 @@ function processUserInput(text) {
     return;
   }
 
-  // Confirmation step
+  // Confirmation
   if (pendingAction) {
     if (text.includes("yes")) {
       speak("Opening now.");
@@ -134,7 +113,7 @@ function processUserInput(text) {
     return;
   }
 
-  // Wake word required
+  // Wake word
   if (!text.includes("bro")) return;
 
   if (text.includes("whatsapp")) {
@@ -143,11 +122,11 @@ function processUserInput(text) {
     return;
   }
 
-  if (text.includes("exit") || text.includes("bye")) {
+  if (text.includes("bye") || text.includes("exit")) {
     speak("Bye AP. Talk to you later.");
     unlocked = false;
-    listening = false;
     recognition.stop();
+    listening = false;
     orbIdle();
     return;
   }
@@ -166,12 +145,6 @@ function handleWhatsappFlow(text) {
 
   if (whatsappStep === "message") {
     whatsappData.message = text;
-    whatsappStep = "attachment";
-    speak("Do you want to attach any file?");
-    return;
-  }
-
-  if (whatsappStep === "attachment") {
     pendingAction = () => {
       const url =
         "https://web.whatsapp.com/send?phone=" +
@@ -180,9 +153,8 @@ function handleWhatsappFlow(text) {
         encodeURIComponent(whatsappData.message);
       window.open(url, "_blank");
     };
-
-    speak("Opening WhatsApp Web. Please review and send.");
     whatsappStep = null;
+    speak("Opening WhatsApp Web. Please review and send.");
   }
 }
 
@@ -196,5 +168,5 @@ mic.onclick = () => {
   }
 };
 
-// Initial state
+// Initial
 orbIdle();
