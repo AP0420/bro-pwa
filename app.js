@@ -1,22 +1,21 @@
 /************************************************
- * BRO – WAKE WORD BASED VOICE ASSISTANT
+ * BRO – WAKE WORD VOICE ASSISTANT (STABLE)
  * Wake word: "bro"
  ************************************************/
 
 const status = document.getElementById("status");
 const orb = document.getElementById("orb");
 
-/* ========== ORB STATES ========== */
+/* ---------- ORB STATES ---------- */
 const orbIdle = () => orb.className = "orb idle";
 const orbListening = () => orb.className = "orb listening";
 const orbSpeaking = () => orb.className = "orb speaking";
 
-/* ========== SPEAK ========== */
+/* ---------- SPEAK ---------- */
 let speaking = false;
-function speak(text, lang = "en-IN") {
-  if (speaking) return;
-
+function speak(text, lang = "en-IN", callback) {
   speaking = true;
+
   const msg = new SpeechSynthesisUtterance(text);
   msg.lang = lang;
 
@@ -27,113 +26,136 @@ function speak(text, lang = "en-IN") {
   msg.onend = () => {
     speaking = false;
     orbIdle();
+    if (callback) callback();
   };
 
   console.log("🤖 Bro:", text);
 }
 
-/* ========== SPEECH RECOGNITION ========== */
+/* ---------- SPEECH RECOGNITION ---------- */
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
-const recognition = new SpeechRecognition();
-recognition.lang = "en-IN";
-recognition.interimResults = true;
-recognition.continuous = true;
-
+let recognition;
 let buffer = "";
 let silenceTimer = null;
 
-/* ========== LANGUAGE DETECTION ========== */
+/* ---------- LANGUAGE ---------- */
 function detectLanguage(text) {
   return /hai|kya|ka|kar|bhej|chalu/.test(text) ? "hi-IN" : "en-IN";
 }
 
-/* ========== WAKE WORD CHECK ========== */
+/* ---------- WAKE WORD ---------- */
 function extractCommand(text) {
-  const match = text.match(/\bbro\b(.*)/);
-  if (!match) return null;        // ❌ no wake word
-  return match[1].trim();         // ✅ command after "bro"
+  const match = text.match(/\bbro\b\s*(.*)/);
+  return match ? match[1].trim() : null;
 }
 
-/* ========== COMMAND ROUTER ========== */
-function routeCommand(command, lang) {
-  if (!command) return;
+/* ---------- START LISTENING ---------- */
+function startRecognition() {
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.interimResults = true;
+  recognition.continuous = false; // 🔑 VERY IMPORTANT
 
-  /* MUSIC */
-  if (/play|chalao/.test(command)) {
-    speak("Playing music", lang);
-    const q = encodeURIComponent(command.replace(/play|chalao/g, ""));
-    window.open(
-      `https://www.youtube.com/results?search_query=${q}`,
-      "_blank"
-    );
+  buffer = "";
+  orbListening();
+  status.innerText = "Listening for 'Bro'…";
+
+  recognition.start();
+
+  recognition.onresult = (e) => {
+    clearTimeout(silenceTimer);
+
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      buffer += e.results[i][0].transcript.toLowerCase() + " ";
+    }
+
+    silenceTimer = setTimeout(() => {
+      const text = buffer.trim();
+      buffer = "";
+      handleSpeech(text);
+    }, 800);
+  };
+
+  recognition.onerror = () => {
+    recognition.stop();
+  };
+
+  recognition.onend = () => {
+    if (!speaking) {
+      setTimeout(startRecognition, 400);
+    }
+  };
+}
+
+/* ---------- MAIN HANDLER ---------- */
+function handleSpeech(text) {
+  console.log("FINAL:", text);
+
+  const command = extractCommand(text);
+  if (!command) {
+    console.log("Ignored (no wake word)");
+    recognition.stop();
     return;
   }
 
-  /* WEATHER */
-  if (/weather|mausam/.test(command)) {
-    speak("Weather information requires internet service", lang);
-    return;
-  }
+  const lang = detectLanguage(command);
 
-  /* NEARBY */
-  if (/nearby|paas|najdeek/.test(command)) {
-    speak("Showing nearby places", lang);
-    window.open(
-      `https://www.google.com/maps/search/${encodeURIComponent(command)}`,
-      "_blank"
-    );
-    return;
-  }
-
-  /* TIME */
+  /* ---- TIME ---- */
   if (/time|samay/.test(command)) {
-    speak(new Date().toLocaleTimeString("en-IN"), lang);
+    recognition.stop();
+    speak(
+      new Date().toLocaleTimeString("en-IN"),
+      lang,
+      startRecognition
+    );
     return;
   }
 
-  /* FALLBACK */
+  /* ---- MUSIC ---- */
+  if (/play|chalao/.test(command)) {
+    recognition.stop();
+    speak("Playing music", lang, () => {
+      const q = encodeURIComponent(command.replace(/play|chalao/g, ""));
+      window.open(
+        `https://www.youtube.com/results?search_query=${q}`,
+        "_blank"
+      );
+      startRecognition();
+    });
+    return;
+  }
+
+  /* ---- NEARBY ---- */
+  if (/nearby|paas|najdeek/.test(command)) {
+    recognition.stop();
+    speak("Showing nearby places", lang, () => {
+      window.open(
+        `https://www.google.com/maps/search/${encodeURIComponent(command)}`,
+        "_blank"
+      );
+      startRecognition();
+    });
+    return;
+  }
+
+  /* ---- FALLBACK ---- */
+  recognition.stop();
   speak(
     lang === "hi-IN"
       ? "Samajh nahi aaya"
       : "I didn't understand that",
-    lang
+    lang,
+    startRecognition
   );
 }
 
-/* ========== LISTENING LOGIC ========== */
-recognition.onresult = (e) => {
-  clearTimeout(silenceTimer);
-
-  for (let i = e.resultIndex; i < e.results.length; i++) {
-    buffer += e.results[i][0].transcript.toLowerCase() + " ";
-  }
-
-  status.innerText = buffer.trim();
-
-  silenceTimer = setTimeout(() => {
-    const text = buffer.trim();
-    buffer = "";
-
-    const lang = detectLanguage(text);
-    const command = extractCommand(text);
-
-    if (!command) {
-      console.log("Ignored (no wake word)");
-      return;
-    }
-
-    routeCommand(command, lang);
-  }, 1000);
-};
-
-/* ========== START ON LOAD ========== */
+/* ---------- INIT ---------- */
 window.onload = () => {
-  speak("Hello, this is Bro. Say Bro to give me a command.");
-  setTimeout(() => {
-    recognition.start();
-    orbListening();
-    status.innerText = "Listening for wake word: Bro";
-  }, 1200);
+  speak(
+    "Hello, this is Bro. Say Bro to give me a command.",
+    "en-IN",
+    startRecognition
+  );
 };
