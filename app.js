@@ -1,6 +1,6 @@
 /*********************************
  * BRO – SIRI STYLE VOICE ASSISTANT
- * SMART SECURITY (HOOD ≈ FOOD FIX)
+ * FULL LISTEN → SINGLE RESPONSE
  *********************************/
 
 const status = document.getElementById("status");
@@ -34,29 +34,29 @@ function speak(text) {
 // ---------- SPEECH RECOGNITION ----------
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
 
+const recognition = new SpeechRecognition();
 recognition.lang = "en-IN";
-recognition.interimResults = false;
+recognition.interimResults = true;   // ✅ IMPORTANT
 recognition.continuous = true;
 
 let listening = false;
 let unlocked = false;
 
+// ---------- SPEECH BUFFER ----------
+let finalTranscript = "";
+let isProcessing = false;
+
 // ---------- SECURITY ----------
 const SECURITY_QUESTION = "What's up my gang?";
-
-// Acceptable STT variations for "hood"
 const HOOD_VARIANTS = ["hood", "food", "good", "home", "wood"];
 
-// ---------- PASSWORD CHECK ----------
 function isCorrectPassword(text) {
   text = text.toLowerCase();
-
-  const hasWelcome = text.includes("welcome");
-  const hasHoodVariant = HOOD_VARIANTS.some(word => text.includes(word));
-
-  return hasWelcome && hasHoodVariant;
+  return (
+    text.includes("welcome") &&
+    HOOD_VARIANTS.some(w => text.includes(w))
+  );
 }
 
 // ---------- WHATSAPP STATE ----------
@@ -64,59 +64,47 @@ let whatsappStep = null;
 let whatsappData = { to: "", message: "", attachment: false };
 let pendingAction = null;
 
-// ---------- INTENT ----------
-function getIntent(text) {
-  if (text.includes("whatsapp")) return "WHATSAPP";
-  if (text === "yes") return "YES";
-  if (text === "no") return "NO";
-  if (text.includes("bye") || text.includes("exit")) return "EXIT";
-  return "UNKNOWN";
-}
-
-// ---------- WHATSAPP FLOW ----------
-function handleWhatsappFlow(text) {
-  if (whatsappStep === "to") {
-    whatsappData.to = text.replace(/\D/g, "");
-    whatsappStep = "message";
-    speak("What message should I send?");
-    return true;
-  }
-
-  if (whatsappStep === "message") {
-    whatsappData.message = text;
-    whatsappStep = "attachment";
-    speak("Do you want to attach any file?");
-    return true;
-  }
-
-  if (whatsappStep === "attachment") {
-    whatsappData.attachment = text.includes("yes");
-
-    pendingAction = () => {
-      const url =
-        "https://web.whatsapp.com/send?phone=" +
-        whatsappData.to +
-        "&text=" +
-        encodeURIComponent(whatsappData.message);
-
-      window.open(url, "_blank");
-    };
-
-    speak("Opening WhatsApp Web. Please review and send the message.");
-    whatsappStep = null;
-    return true;
-  }
-
-  return false;
-}
-
-// ---------- MAIN LISTENER ----------
+// ---------- COLLECT SPEECH ----------
 recognition.onresult = (event) => {
-  const text =
-    event.results[event.results.length - 1][0].transcript.toLowerCase();
-  status.innerText = "You: " + text;
+  let interim = "";
 
-  // 🔐 STRICT SECURITY MODE
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    const transcript = event.results[i][0].transcript.toLowerCase();
+    if (event.results[i].isFinal) {
+      finalTranscript += transcript + " ";
+    } else {
+      interim += transcript;
+    }
+  }
+
+  status.innerText = "You: " + (finalTranscript || interim);
+};
+
+// ---------- PROCESS AFTER USER STOPS ----------
+recognition.onend = () => {
+  if (!finalTranscript || isProcessing) {
+    recognition.start();
+    return;
+  }
+
+  isProcessing = true;
+
+  const text = finalTranscript.trim();
+  finalTranscript = "";
+
+  processUserInput(text);
+
+  setTimeout(() => {
+    isProcessing = false;
+    recognition.start();
+  }, 800);
+};
+
+// ---------- MAIN BRAIN ----------
+function processUserInput(text) {
+  console.log("FINAL INPUT:", text);
+
+  // 🔐 STRICT SECURITY (NO BYPASS)
   if (!unlocked) {
     if (isCorrectPassword(text)) {
       unlocked = true;
@@ -129,49 +117,74 @@ recognition.onresult = (event) => {
 
   // Confirmation step
   if (pendingAction) {
-    const intent = getIntent(text);
-    if (intent === "YES") {
-      speak("Okay, opening now.");
+    if (text.includes("yes")) {
+      speak("Opening now.");
       pendingAction();
       pendingAction = null;
-    } else if (intent === "NO") {
+    } else if (text.includes("no")) {
       speak("Cancelled.");
       pendingAction = null;
     }
     return;
   }
 
-  // Active WhatsApp flow
-  if (whatsappStep && handleWhatsappFlow(text)) return;
+  // WhatsApp flow
+  if (whatsappStep) {
+    handleWhatsappFlow(text);
+    return;
+  }
 
-  // Wake word AFTER unlock
+  // Wake word required
   if (!text.includes("bro")) return;
 
-  const intent = getIntent(text);
-
-  switch (intent) {
-    case "WHATSAPP":
-      whatsappStep = "to";
-      speak("Whom should I send the WhatsApp message to?");
-      break;
-
-    case "EXIT":
-      speak("Bye AP. Talk to you later.");
-      unlocked = false;
-      recognition.stop();
-      listening = false;
-      orbIdle();
-      break;
-
-    default:
-      speak("I am listening. Tell me what you want to do.");
+  if (text.includes("whatsapp")) {
+    whatsappStep = "to";
+    speak("Whom should I send the WhatsApp message to?");
+    return;
   }
-};
 
-// ---------- AUTO RESTART ----------
-recognition.onend = () => {
-  if (listening) recognition.start();
-};
+  if (text.includes("exit") || text.includes("bye")) {
+    speak("Bye AP. Talk to you later.");
+    unlocked = false;
+    listening = false;
+    recognition.stop();
+    orbIdle();
+    return;
+  }
+
+  speak("I am listening. Tell me what you want to do.");
+}
+
+// ---------- WHATSAPP FLOW ----------
+function handleWhatsappFlow(text) {
+  if (whatsappStep === "to") {
+    whatsappData.to = text.replace(/\D/g, "");
+    whatsappStep = "message";
+    speak("What message should I send?");
+    return;
+  }
+
+  if (whatsappStep === "message") {
+    whatsappData.message = text;
+    whatsappStep = "attachment";
+    speak("Do you want to attach any file?");
+    return;
+  }
+
+  if (whatsappStep === "attachment") {
+    pendingAction = () => {
+      const url =
+        "https://web.whatsapp.com/send?phone=" +
+        whatsappData.to +
+        "&text=" +
+        encodeURIComponent(whatsappData.message);
+      window.open(url, "_blank");
+    };
+
+    speak("Opening WhatsApp Web. Please review and send.");
+    whatsappStep = null;
+  }
+}
 
 // ---------- MIC ----------
 mic.onclick = () => {
