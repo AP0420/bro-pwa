@@ -205,152 +205,17 @@ function showSecurityAlert() {
       <div style="font-size: 2rem; color: #fff; margin-bottom: 40px;">
         UNAUTHORIZED ACCESS ATTEMPT DETECTED!
       </div>
-      
-      <!-- Two Cute Robots in Bodyguard Costumes -->
-      <div style="display: flex; justify-content: center; gap: 100px; margin: 40px 0; flex-wrap: wrap;">
-        <!-- Robot 1 -->
-        <div style="position: relative;">
-          <svg width="200" height="300" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-            <!-- Body with Black Suit -->
-            <rect x="50" y="100" width="100" height="120" rx="20" fill="#1a1a1a" />
-            <rect x="40" y="90" width="120" height="20" rx="10" fill="#333" />
-            
-            <!-- Head -->
-            <circle cx="100" cy="70" r="30" fill="#ff9999" />
-            
-            <!-- Glasses -->
-            <rect x="65" y="65" width="30" height="15" rx="5" fill="#111" stroke="#00aaff" stroke-width="2" />
-            <rect x="105" y="65" width="30" height="15" rx="5" fill="#111" stroke="#00aaff" stroke-width="2" />
-            <line x1="95" y1="72" x2="105" y2="72" stroke="#00aaff" stroke-width="2" />
-            
-            <!-- Eyes -->
-            <circle cx="80" cy="70" r="5" fill="#fff" />
-            <circle cx="120" cy="70" r="5" fill="#fff" />
-            <circle cx="80" cy="70" r="2" fill="#000" />
-            <circle cx="120" cy="70" r="2" fill="#000" />
-            
-            <!-- Mouth -->
-            <path d="M 85,85 Q 100,95 115,85" stroke="#ff6666" stroke-width="3" fill="none" />
-            
-            <!-- Arms with Guns -->
-            <!-- Left Arm -->
-            <rect x="20" y="110" width="30" height="10" rx="5" fill="#1a1a1a" />
-            <rect x="10" y="105" width="20" height="20" rx="5" fill="#333" />
-            <!-- Left Gun -->
-            <rect x="5" y="100" width="15" height="30" rx="5" fill="#444" />
-            <rect x="20" y="110" width="25" height="10" rx="3" fill="#555" />
-            <circle cx="28" cy="125" r="8" fill="#222" />
-            <rect x="30" y="115" width="20" height="5" fill="#777" />
-            <line x1="45" y1="117" x2="50" y2="110" stroke="#ff4444" stroke-width="2" />
-            
-            <!-- Right Arm -->
-            <rect x="150" y="110" width="30" height="10" rx="5" fill="#1a1a1a" />
-            <rect x="170" y="105" width="20" height="20" rx="5" fill="#333" />
-            <!-- Right Gun -->
-            <rect x="180" y="100" width="15" height="30" rx="5" fill="#444" />
-            <rect x="155" y="110" width="25" height="10" rx="3" fill="#555" />
-            <circle cx="172" cy="125" r="8" fill="#222" />
-            <rect x="150" y="115" width="20" height="5" fill="#777" />
-            <line x1="150" y1="117" x2="145" y2="110" stroke="#ff4444" stroke-width="2" />
-            
-            <!-- Legs -->
-            <rect x="60" y="220" width="20" height="40" rx="5" fill="#1a1a1a" />
-            <rect x="120" y="220" width="20" height="40" rx="5" fill="#1a1a1a" />
-            
-            <!-- Shoes -->
-            <rect x="55" y="260" width="30" height="15" rx="5" fill="#222" />
-            <rect x="115" y="260" width="30" height="15" rx="5" fill="#222" />
-            
-            <!-- Tie -->
-            <path d="M 100,100 L 90,130 L 100,120 L 110,130 L 100,100" fill="#ff4444" />
-          </svg>
-          <div style="margin-top: 10px; font-weight: bold; color: #fff;">GUARD-BOT 001</div>
-        </div>
-        
-        <!-- Robot 2 -->
-        <div style="position: relative;">
-          <svg width="200" height="300" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-            <!-- Body with Black Suit -->
-            <rect x="50" y="100" width="100" height="120" rx="20" fill="#1a1a1a" />
-            <rect x="40" y="90" width="120" height="20" rx="10" fill="#333" />
-            
-            <!-- Head -->
-            <circle cx="100" cy="70" r="30" fill="#99ccff" />
-            
-            <!-- Glasses -->
-            <rect x="65" y="65" width="30" height="15" rx="5" fill="#111" stroke="#ffaa00" stroke-width="2" />
-            <rect x="105" y="65" width="30" height="15" rx="5" fill="#111" stroke="#ffaa00" stroke-width="2" />
-            <line x1="95" y1="72" x2="105" y2="72" stroke="#ffaa00" stroke-width="2" />
-            
-            <!-- Eyes -->
-            <circle cx="80" cy="70" r="5" fill="#fff" />
-            <circle cx="120" cy="70" r="5" fill="#fff" />
-            <circle cx="80" cy="70" r="2" fill="#000" />
-            <circle cx="120" cy="70" r="2" fill="#000" />
-            
-            <!-- Mouth -->
-            <path d="M 85,85 Q 100,75 115,85" stroke="#ff6666" stroke-width="3" fill="none" />
-            
-            <!-- Arms with Guns -->
-            <!-- Left Arm -->
-            <rect x="20" y="110" width="30" height="10" rx="5" fill="#1a1a1a" />
-            <rect x="10" y="105" width="20" height="20" rx="5" fill="#333" />
-            <!-- Left Gun -->
-            <rect x="5" y="100" width="15" height="30" rx="5" fill="#444" />
-            <rect x="20" y="110" width="25" height="10" rx="3" fill="#555" />
-            <circle cx="28" cy="125" r="8" fill="#222" />
-            <rect x="30" y="115" width="20" height="5" fill="#777" />
-            <line x1="45" y1="117" x2="50" y2="110" stroke="#ff4444" stroke-width="2" />
-            
-            <!-- Right Arm -->
-            <rect x="150" y="110" width="30" height="10" rx="5" fill="#1a1a1a" />
-            <rect x="170" y="105" width="20" height="20" rx="5" fill="#333" />
-            <!-- Right Gun -->
-            <rect x="180" y="100" width="15" height="30" rx="5" fill="#444" />
-            <rect x="155" y="110" width="25" height="10" rx="3" fill="#555" />
-            <circle cx="172" cy="125" r="8" fill="#222" />
-            <rect x="150" y="115" width="20" height="5" fill="#777" />
-            <line x1="150" y1="117" x2="145" y2="110" stroke="#ff4444" stroke-width="2" />
-            
-            <!-- Legs -->
-            <rect x="60" y="220" width="20" height="40" rx="5" fill="#1a1a1a" />
-            <rect x="120" y="220" width="20" height="40" rx="5" fill="#1a1a1a" />
-            
-            <!-- Shoes -->
-            <rect x="55" y="260" width="30" height="15" rx="5" fill="#222" />
-            <rect x="115" y="260" width="30" height="15" rx="5" fill="#222" />
-            
-            <!-- Badge -->
-            <circle cx="100" cy="130" r="15" fill="#ffaa00" />
-            <text x="100" y="135" text-anchor="middle" fill="#000" font-size="10" font-weight="bold">SEC</text>
-          </svg>
-          <div style="margin-top: 10px; font-weight: bold; color: #fff;">GUARD-BOT 002</div>
-        </div>
+      <div style="margin: 40px auto; max-width: 500px;">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cdefs%3E%3ClinearGradient id='bodyGrad' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ff6b6b;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23c92a2a;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform='translate(200,200)'%3E%3Crect x='-60' y='0' width='120' height='140' rx='15' fill='url(%23bodyGrad)'/%3E%3Ccircle cx='0' cy='-40' r='50' fill='%23ff8787'/%3E%3Crect x='-65' y='40' width='25' height='80' rx='12' fill='%23c92a2a'/%3E%3Crect x='40' y='40' width='25' height='80' rx='12' fill='%23c92a2a'/%3E%3Crect x='-65' y='100' width='30' height='70' rx='12' fill='%23a61e4d'/%3E%3Crect x='35' y='100' width='30' height='70' rx='12' fill='%23a61e4d'/%3E%3Cellipse cx='-15' cy='-45' rx='8' ry='10' fill='%23fff'/%3E%3Cellipse cx='15' cy='-45' rx='8' ry='10' fill='%23fff'/%3E%3Cellipse cx='-15' cy='-45' rx='4' ry='5' fill='%23000'/%3E%3Cellipse cx='15' cy='-45' rx='4' ry='5' fill='%23000'/%3E%3Cpath d='M -15,-25 Q 0,-30 15,-25' stroke='%23000' stroke-width='3' fill='none'/%3E%3Cellipse cx='0' cy='-15' rx='12' ry='8' fill='%23ffd43b'/%3E%3Cpath d='M -25,-60 L -40,-75 L -35,-80 L -20,-65 Z' fill='%23868e96'/%3E%3Cpath d='M 25,-60 L 40,-75 L 35,-80 L 20,-65 Z' fill='%23868e96'/%3E%3Cg transform='translate(80,-20) rotate(25)'%3E%3Crect x='0' y='0' width='15' height='60' rx='7' fill='%234a5568'/%3E%3Crect x='0' y='50' width='35' height='15' rx='7' fill='%232d3748'/%3E%3Crect x='25' y='53' width='8' height='9' fill='%23718096'/%3E%3Cpath d='M 33,57 L 50,57 L 48,62 L 35,62 Z' fill='%23ffd43b' stroke='%23ff6b00' stroke-width='2'/%3E%3Cpath d='M 48,57 L 70,45 L 68,50 L 48,62 Z' fill='%23ffd43b' stroke='%23ff6b00' stroke-width='2'/%3E%3Cpath d='M 48,57 L 70,69 L 68,64 L 48,62 Z' fill='%23ffd43b' stroke='%23ff6b00' stroke-width='2'/%3E%3C/g%3E%3Ctext x='-45' y='180' font-family='Arial Black' font-size='24' fill='%23fff' font-weight='bold'%3ESECURITY%3C/text%3E%3C/g%3E%3C/svg%3E" alt="Security Robot" style="width: 100%; max-width: 400px; animation: shake 0.5s infinite;">
       </div>
-      
-      <!-- Target pointing at viewer -->
-      <div style="position: relative; margin: 50px auto; width: 400px; height: 200px;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-          <div style="width: 100px; height: 100px; border: 5px solid #ff4444; border-radius: 50%; position: relative; animation: pulse 1s infinite;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: #ff4444; font-weight: bold;">👤</div>
-          </div>
-          <!-- Crosshair lines -->
-          <div style="position: absolute; top: 50%; left: -50px; right: -50px; height: 2px; background: #ff4444; transform: translateY(-50%);"></div>
-          <div style="position: absolute; left: 50%; top: -50px; bottom: -50px; width: 2px; background: #ff4444; transform: translateX(-50%);"></div>
-        </div>
-        <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 1.2rem; color: #ffd43b; font-weight: bold;">
-          TARGET ACQUIRED
-        </div>
-      </div>
-      
       <div style="font-size: 3rem; color: #ff6b6b; font-weight: bold; margin: 30px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); animation: blink 0.5s infinite;">
-        HANDS UP! DON'T MOVE!
+        GET THE F**K OUT OF HERE!
       </div>
-      <div style="font-size: 1.2rem; color: #ffd43b; margin-top: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px;">
-        ⚠️ This incident has been logged and authorities have been notified ⚠️
+      <div style="font-size: 1.2rem; color: #ffd43b; margin-top: 20px;">
+        ⚠️ This incident has been logged ⚠️
       </div>
-      <button onclick="resetSecurity()" style="margin-top: 40px; background: linear-gradient(45deg, #c92a2a, #a61e4d); border: 3px solid #fff; color: white; padding: 15px 40px; font-size: 1.2rem; border-radius: 50px; cursor: pointer; font-weight: bold; transition: all 0.3s;">
-        🔄 RESET SECURITY
+      <button onclick="resetSecurity()" style="margin-top: 40px; background: #c92a2a; border: 3px solid #fff; color: white; padding: 15px 40px; font-size: 1.2rem; border-radius: 50px; cursor: pointer; font-weight: bold;">
+        RESET SECURITY
       </button>
     </div>
     <style>
@@ -363,15 +228,11 @@ function showSecurityAlert() {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.3; }
       }
-      @keyframes pulse {
-        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.7; }
-      }
     </style>
   `;
   
   // Play aggressive warning sound
-  const warningMsg = new SpeechSynthesisUtterance("Security breach detected! Hands up! Don't move! Unauthorized access will be reported!");
+  const warningMsg = new SpeechSynthesisUtterance("Security breach detected! Get the fuck out of here! Unauthorized access will be reported!");
   warningMsg.rate = 1.3;
   warningMsg.pitch = 0.7;
   warningMsg.volume = 1.0;
@@ -406,13 +267,7 @@ function unlockApp() {
   if (lockBtn) lockBtn.style.display = "inline-block";
   status.innerText = "✅ Authenticated! Ready to use";
   
-  // Say "Welcome AP" after face verification
-  speak("Welcome AP", "en-IN", () => {
-    // Add a slight pause then introduce itself
-    setTimeout(() => {
-      speak("Authentication successful. Hello, I am Bro.", "en-IN");
-    }, 800);
-  });
+  speak("Authentication successful. Hello, I am Bro.", "en-IN");
 }
 
 function lockApp() {
