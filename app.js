@@ -1,6 +1,5 @@
 /*********************************
- * BRO – STABLE VOICE ASSISTANT
- * INTRO + LISTEN + RESPOND
+ * BRO – STABLE WORK ASSISTANT
  *********************************/
 
 const status = document.getElementById("status");
@@ -30,7 +29,8 @@ const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
 let recognition = null;
-let hasStarted = false; // intro control
+let hasStarted = false;
+let hasGreeted = false; // ✅ prevents repeat greeting
 
 function startListening() {
   recognition = new SpeechRecognition();
@@ -49,22 +49,46 @@ function startListening() {
     processUserInput(text);
   };
 
-  recognition.onerror = (e) => {
-    console.error("Speech error:", e);
+  recognition.onerror = () => {
     orbIdle();
   };
 
   recognition.onend = () => {
     setTimeout(() => {
       startListening();
-    }, 700);
+    }, 900);
   };
 }
 
-// ---------- MAIN LOGIC ----------
+// ---------- MAIN BRAIN ----------
 function processUserInput(text) {
   console.log("FINAL INPUT:", text);
 
+  // Respond only to commands with "bro"
+  if (!text.includes("bro")) return;
+
+  // 🆕 WORK START COMMAND
+  if (text.includes("starting my work")) {
+    speak("Alright AP, opening your work setup.");
+
+    setTimeout(() => {
+      window.open(
+        "http://outlook.office.com/mail/inbox/id/AAQkADY1ODE5YTg5LWE0ZWItNDczMy05OGNjLTk5YzkxNzMzNDJmNAAQAEUrUSYfY2dJq6PVcGU9qu8%3D",
+        "_blank"
+      );
+      window.open("https://web.whatsapp.com/", "_blank");
+      window.open("https://console.acefone.in/livecalls", "_blank");
+      window.open("https://crmadmin.oneandro.com/user-management", "_blank");
+      window.open(
+        "https://desk.zoho.in/agent/oneandro/oneandro-support/tickets/new",
+        "_blank"
+      );
+    }, 1200);
+
+    return;
+  }
+
+  // Basic responses (no repetition)
   if (text.includes("hello") || text.includes("hi")) {
     speak("Hello AP");
     return;
@@ -75,27 +99,26 @@ function processUserInput(text) {
     return;
   }
 
-  if (text.includes("your name")) {
-    speak("My name is Bro");
-    return;
-  }
-
-  speak("I heard you. Please ask me something.");
+  speak("I am listening AP. Tell me what you want to do.");
 }
 
-// ---------- MIC CLICK (REQUIRED FOR AUDIO) ----------
+// ---------- MIC CLICK ----------
 mic.onclick = () => {
   if (!hasStarted) {
     hasStarted = true;
-    speak("Hello, this is Bro. How may I assist you?");
-    setTimeout(() => {
-      startListening();
-    }, 1200);
+
+    if (!hasGreeted) {
+      hasGreeted = true;
+      speak("Hello, this is Bro. How may I assist you?");
+      setTimeout(() => {
+        startListening();
+      }, 1300);
+    }
   } else {
     startListening();
   }
 };
 
-// Initial state
+// ---------- INIT ----------
 orbIdle();
 status.innerText = "Tap the mic to start";
