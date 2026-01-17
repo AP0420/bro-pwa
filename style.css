@@ -64,6 +64,12 @@ h1 {
   animation: speaking 0.5s infinite;
 }
 
+.orb.locked {
+  background: radial-gradient(circle, #ef4444, #dc2626);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+  animation: pulse 2s infinite;
+}
+
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
@@ -94,6 +100,7 @@ button {
   cursor: pointer;
   transition: all 0.3s;
   backdrop-filter: blur(10px);
+  margin: 5px;
 }
 
 button:hover {
@@ -103,6 +110,11 @@ button:hover {
 
 button:active {
   transform: scale(0.95);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .transcript {
@@ -140,68 +152,58 @@ button:active {
   max-height: 200px;
   overflow-y: auto;
 }
-```
 
-### 3. **app.js**
-(Use the JavaScript code I provided in the previous message)
+/* Face Detection Overlay */
+.face-detection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
 
----
+.face-detection-overlay.hidden {
+  display: none;
+}
 
-## 🚀 Deployment Options
+.camera-container {
+  position: relative;
+  margin: 20px;
+}
 
-### **Option 1: GitHub Pages (FREE & Easy)**
+#cameraFeed {
+  width: 640px;
+  height: 480px;
+  max-width: 90vw;
+  max-height: 60vh;
+  border-radius: 20px;
+  border: 3px solid #a78bfa;
+  box-shadow: 0 0 30px rgba(167, 139, 250, 0.5);
+}
 
-1. Create a GitHub account (if you don't have one)
-2. Create a new repository (e.g., "bro-voice-assistant")
-3. Upload these 3 files: `index.html`, `style.css`, `app.js`
-4. Go to Settings → Pages
-5. Select "main" branch and save
-6. Your site will be live at: `https://yourusername.github.io/bro-voice-assistant`
+.face-status {
+  margin-top: 20px;
+  font-size: 1.5rem;
+  color: white;
+}
 
-### **Option 2: Netlify (FREE & Very Easy)**
+.setup-buttons {
+  margin-top: 20px;
+}
 
-1. Go to [netlify.com](https://netlify.com)
-2. Sign up (free)
-3. Drag and drop your folder containing all 3 files
-4. Your site is live instantly!
+.face-box {
+  position: absolute;
+  border: 3px solid #34d399;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.8);
+}
 
-### **Option 3: Vercel (FREE)**
-
-1. Go to [vercel.com](https://vercel.com)
-2. Sign up with GitHub
-3. Import your repository
-4. Deploy!
-
-### **Option 4: Local Server (for testing)**
-
-1. Install Python (if not installed)
-2. Open terminal in your project folder
-3. Run: `python -m http.server 8000`
-4. Open browser: `http://localhost:8000`
-
----
-
-## ⚠️ Important Notes
-
-### **HTTPS Required**
-- Voice recognition **ONLY works on HTTPS** (not HTTP)
-- GitHub Pages, Netlify, and Vercel all provide HTTPS automatically
-- Local testing works on `localhost`
-
-### **Browser Support**
-- Works best on **Chrome** or **Edge**
-- Limited support on Firefox
-- **Safari has issues** with Web Speech API
-
-### **Permissions**
-- Browser will ask for microphone permission
-- Click "Allow" when prompted
-
----
-
-## 📂 Final Folder Structure
-```
-bro-voice-assistant/
-├── index.html
-├── style.css
-└── app.js
+canvas {
+  display: none;
+}
