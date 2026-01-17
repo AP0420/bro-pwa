@@ -1,32 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bro - Voice Assistant</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="container">
-    <h1>🎤 BRO</h1>
-    <div id="status">Initializing...</div>
-    
-    <div class="orb-container">
-      <div id="orb" class="orb idle"></div>
-    </div>
-    
-    <div class="controls">
-      <button id="toggleBtn" onclick="toggleListening()">Start Listening</button>
-    </div>
-    
-    <div class="transcript">
-      <div class="transcript-label">You said:</div>
-      <div id="transcript" class="transcript-text">—</div>
-    </div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bro – Your Personal Assistant</title>
 
-    <div class="debug" id="debug">Debug log will appear here...</div>
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Prevent caching issues -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+</head>
+
+<body>
+
+  <div class="app">
+    <!-- Glowing Orb -->
+    <div id="orb" class="orb idle"></div>
+
+    <!-- Status / Transcript -->
+    <div id="status">Tap the mic to start</div>
+
+    <!-- Mic Button -->
+    <button id="mic">🎙️ Tap to Talk</button>
   </div>
 
+  <!-- JavaScript -->
   <script src="app.js"></script>
+
 </body>
 </html>
