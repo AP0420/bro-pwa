@@ -1,5 +1,5 @@
 /*********************************
- * BRO – STABLE WORK ASSISTANT
+ * BRO – WORK ASSISTANT (STABLE)
  *********************************/
 
 const status = document.getElementById("status");
@@ -12,7 +12,12 @@ function orbListening() { orb.className = "orb listening"; }
 function orbSpeaking() { orb.className = "orb speaking"; }
 
 // ---------- SPEAK ----------
+let isSpeaking = false;
+
 function speak(text) {
+  if (isSpeaking) return; // ⛔ prevent overlap
+  isSpeaking = true;
+
   const msg = new SpeechSynthesisUtterance(text);
   msg.lang = "en-IN";
 
@@ -20,7 +25,11 @@ function speak(text) {
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
 
-  msg.onend = () => orbIdle();
+  msg.onend = () => {
+    isSpeaking = false;
+    orbIdle();
+  };
+
   console.log("🤖 Bro:", text);
 }
 
@@ -30,9 +39,12 @@ const SpeechRecognition =
 
 let recognition = null;
 let hasStarted = false;
-let hasGreeted = false; // ✅ prevents repeat greeting
+let hasGreeted = false;
+let isHandlingCommand = false;
 
 function startListening() {
+  if (isHandlingCommand || isSpeaking) return;
+
   recognition = new SpeechRecognition();
   recognition.lang = "en-IN";
   recognition.interimResults = false;
@@ -56,19 +68,40 @@ function startListening() {
   recognition.onend = () => {
     setTimeout(() => {
       startListening();
-    }, 900);
+    }, 1200);
   };
+}
+
+// ---------- INTENT DETECTION ----------
+function isStartWorkIntent(text) {
+  const keywords = [
+    "start",
+    "starting",
+    "begin",
+    "work",
+    "working",
+    "office",
+    "job",
+    "studying",
+    "study"
+  ];
+
+  return keywords.some(word => text.includes(word));
 }
 
 // ---------- MAIN BRAIN ----------
 function processUserInput(text) {
+  if (isHandlingCommand || isSpeaking) return;
+
   console.log("FINAL INPUT:", text);
 
-  // Respond only to commands with "bro"
+  // Only react to "bro"
   if (!text.includes("bro")) return;
 
-  // 🆕 WORK START COMMAND
-  if (text.includes("starting my work")) {
+  // 🧠 START WORK INTENT (ROBUST)
+  if (isStartWorkIntent(text)) {
+    isHandlingCommand = true;
+
     speak("Alright AP, opening your work setup.");
 
     setTimeout(() => {
@@ -83,12 +116,14 @@ function processUserInput(text) {
         "https://desk.zoho.in/agent/oneandro/oneandro-support/tickets/new",
         "_blank"
       );
-    }, 1200);
+
+      isHandlingCommand = false;
+    }, 1500);
 
     return;
   }
 
-  // Basic responses (no repetition)
+  // Simple responses (NO GREETING LOOP)
   if (text.includes("hello") || text.includes("hi")) {
     speak("Hello AP");
     return;
@@ -99,10 +134,11 @@ function processUserInput(text) {
     return;
   }
 
-  speak("I am listening AP. Tell me what you want to do.");
+  // Silent ignore instead of spam
+  console.log("No actionable intent detected");
 }
 
-// ---------- MIC CLICK ----------
+// ---------- MIC ----------
 mic.onclick = () => {
   if (!hasStarted) {
     hasStarted = true;
@@ -110,9 +146,7 @@ mic.onclick = () => {
     if (!hasGreeted) {
       hasGreeted = true;
       speak("Hello, this is Bro. How may I assist you?");
-      setTimeout(() => {
-        startListening();
-      }, 1300);
+      setTimeout(startListening, 1500);
     }
   } else {
     startListening();
