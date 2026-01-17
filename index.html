@@ -7,16 +7,33 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Face Detection Overlay -->
+  <div id="faceOverlay" class="face-detection-overlay">
+    <h1>🔐 Face Authentication</h1>
+    <div id="faceStatus" class="face-status">Initializing camera...</div>
+    <div class="camera-container">
+      <video id="cameraFeed" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="setup-buttons">
+      <button id="setupFaceBtn" style="display:none;">Setup My Face</button>
+      <button id="verifyFaceBtn" style="display:none;">Verify Face</button>
+      <button id="skipAuthBtn">Skip Authentication (Demo Mode)</button>
+    </div>
+  </div>
+
+  <!-- Main App -->
   <div class="container">
     <h1>🎤 BRO</h1>
     <div id="status">Initializing...</div>
     
     <div class="orb-container">
-      <div id="orb" class="orb idle"></div>
+      <div id="orb" class="orb locked"></div>
     </div>
     
     <div class="controls">
-      <button id="toggleBtn" onclick="toggleListening()">Start Listening</button>
+      <button id="toggleBtn" onclick="toggleListening()" disabled>🔒 Locked</button>
+      <button id="lockBtn" onclick="lockApp()" style="display:none;">🔒 Lock App</button>
     </div>
     
     <div class="transcript">
@@ -27,6 +44,11 @@
     <div class="debug" id="debug">Debug log will appear here...</div>
   </div>
 
+  <!-- TensorFlow & BlazeFace Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+  
+  <!-- Your App Script -->
   <script src="app.js"></script>
 </body>
 </html>
