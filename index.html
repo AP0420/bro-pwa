@@ -2,28 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Bro Assistant</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="manifest.json" />
+  <title>Bro – Your Personal Assistant</title>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Prevent caching issues -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 </head>
 
 <body>
+
   <div class="app">
-
-    <h1 class="title">Bro</h1>
-
-    <!-- Siri-like Orb -->
+    <!-- Glowing Orb -->
     <div id="orb" class="orb idle"></div>
 
-    <button id="mic" class="mic">🎙️</button>
+    <!-- Status / Transcript -->
+    <div id="status">Tap the mic to start</div>
 
-    <p id="status" class="status">
-      Tap mic and say <b>“Bro”</b>
-    </p>
-
+    <!-- Mic Button -->
+    <button id="mic">🎙️ Tap to Talk</button>
   </div>
 
+  <!-- JavaScript -->
   <script src="app.js"></script>
+
 </body>
 </html>
