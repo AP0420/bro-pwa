@@ -1,5 +1,6 @@
 /*********************************
- * BRO – STABLE BASE VERSION
+ * BRO – STABLE VOICE ASSISTANT
+ * INTRO + LISTEN + RESPOND
  *********************************/
 
 const status = document.getElementById("status");
@@ -7,15 +8,9 @@ const mic = document.getElementById("mic");
 const orb = document.getElementById("orb");
 
 // ---------- ORB STATES ----------
-function orbIdle() {
-  orb.className = "orb idle";
-}
-function orbListening() {
-  orb.className = "orb listening";
-}
-function orbSpeaking() {
-  orb.className = "orb speaking";
-}
+function orbIdle() { orb.className = "orb idle"; }
+function orbListening() { orb.className = "orb listening"; }
+function orbSpeaking() { orb.className = "orb speaking"; }
 
 // ---------- SPEAK ----------
 function speak(text) {
@@ -26,10 +21,7 @@ function speak(text) {
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
 
-  msg.onend = () => {
-    orbIdle();
-  };
-
+  msg.onend = () => orbIdle();
   console.log("🤖 Bro:", text);
 }
 
@@ -37,13 +29,14 @@ function speak(text) {
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
-let recognition;
+let recognition = null;
+let hasStarted = false; // intro control
 
 function startListening() {
   recognition = new SpeechRecognition();
   recognition.lang = "en-IN";
-  recognition.interimResults = false;   // 🔑 IMPORTANT
-  recognition.continuous = false;       // 🔑 IMPORTANT
+  recognition.interimResults = false;
+  recognition.continuous = false;
 
   orbListening();
   status.innerText = "Listening...";
@@ -62,10 +55,9 @@ function startListening() {
   };
 
   recognition.onend = () => {
-    // Restart automatically after response
     setTimeout(() => {
-      if (recognition) startListening();
-    }, 800);
+      startListening();
+    }, 700);
   };
 }
 
@@ -88,13 +80,22 @@ function processUserInput(text) {
     return;
   }
 
-  speak("I heard you. Say hello, time, or ask my name.");
+  speak("I heard you. Please ask me something.");
 }
 
-// ---------- MIC ----------
+// ---------- MIC CLICK (REQUIRED FOR AUDIO) ----------
 mic.onclick = () => {
-  startListening();
+  if (!hasStarted) {
+    hasStarted = true;
+    speak("Hello, this is Bro. How may I assist you?");
+    setTimeout(() => {
+      startListening();
+    }, 1200);
+  } else {
+    startListening();
+  }
 };
 
-// Initial
+// Initial state
 orbIdle();
+status.innerText = "Tap the mic to start";
