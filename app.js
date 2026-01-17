@@ -1,13 +1,28 @@
 /************************************************
- * BRO – WAKE WORD VOICE ASSISTANT (FIXED v2)
- * Wake word: "bro"
+ * BRO – VOICE ASSISTANT WITH FACE AUTH
  ************************************************/
 
 const status = document.getElementById("status");
 const orb = document.getElementById("orb");
 const transcriptEl = document.getElementById("transcript");
 const toggleBtn = document.getElementById("toggleBtn");
+const lockBtn = document.getElementById("lockBtn");
 const debugEl = document.getElementById("debug");
+
+// Face detection elements
+const faceOverlay = document.getElementById("faceOverlay");
+const faceStatus = document.getElementById("faceStatus");
+const cameraFeed = document.getElementById("cameraFeed");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const setupFaceBtn = document.getElementById("setupFaceBtn");
+const verifyFaceBtn = document.getElementById("verifyFaceBtn");
+const skipAuthBtn = document.getElementById("skipAuthBtn");
+
+let blazefaceModel = null;
+let stream = null;
+let isAuthenticated = false;
+let savedFaceDescriptor = null;
 
 function debugLog(msg) {
   console.log(msg);
@@ -18,6 +33,161 @@ function debugLog(msg) {
 const orbIdle = () => orb.className = "orb idle";
 const orbListening = () => orb.className = "orb listening";
 const orbSpeaking = () => orb.className = "orb speaking";
+const orbLocked = () => orb.className = "orb locked";
+
+/* ---------- FACE DETECTION ---------- */
+async function initFaceDetection() {
+  try {
+    faceStatus.innerText = "Loading face detection model...";
+    blazefaceModel = await blazeface.load();
+    faceStatus.innerText = "Starting camera...";
+    
+    stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { width: 640, height: 480 } 
+    });
+    cameraFeed.srcObject = stream;
+    
+    // Check if face was previously saved
+    const saved = localStorage.getItem("userFaceData");
+    if (saved) {
+      savedFaceDescriptor = JSON.parse(saved);
+      faceStatus.innerText = "Face recognized! Click 'Verify Face' to unlock";
+      verifyFaceBtn.style.display = "inline-block";
+    } else {
+      faceStatus.innerText = "No face setup. Click 'Setup My Face' to register";
+      setupFaceBtn.style.display = "inline-block";
+    }
+    
+  } catch (error) {
+    faceStatus.innerText = "Error: " + error.message;
+    debugLog("Face detection error: " + error.message);
+  }
+}
+
+async function detectFace() {
+  if (!blazefaceModel) return null;
+  
+  canvas.width = cameraFeed.videoWidth;
+  canvas.height = cameraFeed.videoHeight;
+  ctx.drawImage(cameraFeed, 0, 0);
+  
+  const predictions = await blazefaceModel.estimateFaces(canvas, false);
+  return predictions.length > 0 ? predictions[0] : null;
+}
+
+function getFaceDescriptor(prediction) {
+  // Simple descriptor using face landmarks
+  const landmarks = prediction.landmarks;
+  return {
+    leftEye: landmarks[0],
+    rightEye: landmarks[1],
+    nose: landmarks[2],
+    mouth: landmarks[3],
+    leftEar: landmarks[4],
+    rightEar: landmarks[5]
+  };
+}
+
+function compareFaces(face1, face2) {
+  // Simple Euclidean distance comparison
+  let totalDistance = 0;
+  const points = ['leftEye', 'rightEye', 'nose', 'mouth', 'leftEar', 'rightEar'];
+  
+  for (let point of points) {
+    const dx = face1[point][0] - face2[point][0];
+    const dy = face1[point][1] - face2[point][1];
+    totalDistance += Math.sqrt(dx * dx + dy * dy);
+  }
+  
+  const avgDistance = totalDistance / points.length;
+  return avgDistance < 30; // Threshold for matching
+}
+
+setupFaceBtn.onclick = async () => {
+  faceStatus.innerText = "Look at the camera and hold still...";
+  setupFaceBtn.disabled = true;
+  
+  setTimeout(async () => {
+    const face = await detectFace();
+    if (face) {
+      savedFaceDescriptor = getFaceDescriptor(face);
+      localStorage.setItem("userFaceData", JSON.stringify(savedFaceDescriptor));
+      faceStatus.innerText = "✅ Face registered! Click 'Verify Face' to unlock";
+      setupFaceBtn.style.display = "none";
+      verifyFaceBtn.style.display = "inline-block";
+    } else {
+      faceStatus.innerText = "❌ No face detected. Please try again.";
+      setupFaceBtn.disabled = false;
+    }
+  }, 2000);
+};
+
+verifyFaceBtn.onclick = async () => {
+  faceStatus.innerText = "Verifying your face...";
+  verifyFaceBtn.disabled = true;
+  
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  const verifyInterval = setInterval(async () => {
+    const face = await detectFace();
+    attempts++;
+    
+    if (face && savedFaceDescriptor) {
+      const currentDescriptor = getFaceDescriptor(face);
+      const isMatch = compareFaces(savedFaceDescriptor, currentDescriptor);
+      
+      if (isMatch) {
+        faceStatus.innerText = "✅ Face verified! Access granted";
+        clearInterval(verifyInterval);
+        unlockApp();
+      } else if (attempts >= maxAttempts) {
+        faceStatus.innerText = "❌ Face verification failed. Try again.";
+        verifyFaceBtn.disabled = false;
+        clearInterval(verifyInterval);
+      }
+    } else if (attempts >= maxAttempts) {
+      faceStatus.innerText = "❌ No face detected. Try again.";
+      verifyFaceBtn.disabled = false;
+      clearInterval(verifyInterval);
+    }
+  }, 1000);
+};
+
+skipAuthBtn.onclick = () => {
+  unlockApp();
+};
+
+function unlockApp() {
+  isAuthenticated = true;
+  faceOverlay.classList.add("hidden");
+  
+  // Stop camera
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+  }
+  
+  orbIdle();
+  toggleBtn.disabled = false;
+  toggleBtn.innerText = "Start Listening";
+  lockBtn.style.display = "inline-block";
+  status.innerText = "✅ Authenticated! Ready to use";
+  
+  speak("Authentication successful. Hello, I am Bro.", "en-IN");
+}
+
+function lockApp() {
+  isAuthenticated = false;
+  stopRecognition();
+  orbLocked();
+  toggleBtn.disabled = true;
+  toggleBtn.innerText = "🔒 Locked";
+  lockBtn.style.display = "none";
+  status.innerText = "🔒 App locked";
+  faceOverlay.classList.remove("hidden");
+  verifyFaceBtn.disabled = false;
+  initFaceDetection();
+}
 
 /* ---------- SPEAK ---------- */
 let speaking = false;
@@ -45,7 +215,7 @@ function speak(text, lang = "en-IN", callback) {
   msg.onend = () => {
     debugLog("✅ Speech ended");
     speaking = false;
-    orbIdle();
+    if (isAuthenticated) orbIdle();
     if (callback) {
       setTimeout(callback, 500);
     }
@@ -54,7 +224,7 @@ function speak(text, lang = "en-IN", callback) {
   msg.onerror = (e) => {
     debugLog(`❌ Speech error: ${e.error}`);
     speaking = false;
-    orbIdle();
+    if (isAuthenticated) orbIdle();
     if (callback) callback();
   };
   
@@ -69,17 +239,13 @@ let restartTimeout = null;
 let lastProcessedCommand = "";
 let commandTimeout = null;
 
-/* ---------- LANGUAGE DETECTION ---------- */
 function detectLanguage(text) {
   const hindiWords = /hai|kya|ka|kar|bhej|chalu|karo|batao|dikhao|samay|tarikh/;
   return hindiWords.test(text) ? "hi-IN" : "en-IN";
 }
 
-/* ---------- WAKE WORD EXTRACTION ---------- */
 function extractCommand(text) {
   const lower = text.toLowerCase();
-  
-  // Look for "bro" followed by a command
   const patterns = [
     /(?:hey\s+)?(?:ok\s+)?bro\s+(.+)/i
   ];
@@ -96,8 +262,12 @@ function extractCommand(text) {
   return null;
 }
 
-/* ---------- START CONTINUOUS LISTENING ---------- */
 function startRecognition() {
+  if (!isAuthenticated) {
+    debugLog("⚠️ App is locked. Cannot start recognition.");
+    return;
+  }
+  
   if (!isListening || speaking || recognitionActive) {
     debugLog(`⏸️ Skipping start (listening: ${isListening}, speaking: ${speaking}, active: ${recognitionActive})`);
     return;
@@ -135,15 +305,12 @@ function startRecognition() {
       
       transcriptEl.innerText = text || "—";
 
-      // Check for wake word
       const command = extractCommand(text);
       if (command && command !== lastProcessedCommand) {
         debugLog(`🎯 Command detected: "${command}"`);
         
-        // Clear any existing timeout
         clearTimeout(commandTimeout);
         
-        // Wait for complete command (more patience)
         commandTimeout = setTimeout(() => {
           debugLog(`⚡ Processing command...`);
           handleCommand(command);
@@ -162,8 +329,7 @@ function startRecognition() {
       debugLog("🔴 Recognition ENDED");
       recognitionActive = false;
       
-      // Auto-restart if still supposed to be listening
-      if (isListening && !speaking) {
+      if (isListening && !speaking && isAuthenticated) {
         clearTimeout(restartTimeout);
         restartTimeout = setTimeout(() => {
           debugLog("🔄 Auto-restarting...");
@@ -179,7 +345,6 @@ function startRecognition() {
   }
 }
 
-/* ---------- STOP LISTENING ---------- */
 function stopRecognition() {
   debugLog("🛑 Stopping recognition");
   isListening = false;
@@ -194,15 +359,13 @@ function stopRecognition() {
     }
   }
   
-  orbIdle();
+  if (isAuthenticated) orbIdle();
   status.innerText = "Stopped listening";
 }
 
-/* ---------- COMMAND HANDLER ---------- */
 function handleCommand(command) {
   debugLog(`🔧 HANDLING: "${command}"`);
   
-  // Stop listening while processing
   if (recognition && recognitionActive) {
     recognition.stop();
   }
@@ -278,7 +441,6 @@ function handleCommand(command) {
       lang === "hi-IN" ? "Sab links khol raha hun" : "Opening all work links",
       lang,
       () => {
-        // Open all work links
         const links = [
           "http://outlook.office.com/mail/inbox/id/AAQkADY1ODE5YTg5LWE0ZWItNDczMy05OGNjLTk5YzkxNzMzNDJmNAAQAEUrUSYfY2dJq6PVcGU9qu8%3D",
           "https://web.whatsapp.com/",
@@ -290,7 +452,7 @@ function handleCommand(command) {
         links.forEach((link, index) => {
           setTimeout(() => {
             window.open(link, "_blank");
-          }, index * 500); // Stagger opening by 500ms each
+          }, index * 500);
         });
         
         if (isListening) setTimeout(startRecognition, 3000);
@@ -325,8 +487,9 @@ function handleCommand(command) {
   );
 }
 
-/* ---------- TOGGLE BUTTON ---------- */
 function toggleListening() {
+  if (!isAuthenticated) return;
+  
   if (isListening) {
     stopRecognition();
     toggleBtn.innerText = "Start Listening";
@@ -347,18 +510,9 @@ window.onload = () => {
   }
   
   debugLog("✅ App initialized");
-  status.innerText = "Ready! Click 'Start Listening'";
-  orbIdle();
+  status.innerText = "🔒 Locked - Authenticate to use";
+  orbLocked();
   
-  // Test speech synthesis
-  setTimeout(() => {
-    speak(
-      "Hello, I am Bro. Click start listening, then say Bro followed by your command.",
-      "en-IN",
-      () => {
-        debugLog("✅ Initial greeting complete");
-        status.innerText = "Ready! Click 'Start Listening'";
-      }
-    );
-  }, 500);
+  // Start face detection
+  initFaceDetection();
 };
